@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from accounts import views as account_views
 from dashboard import views as dashboard_views
@@ -18,6 +19,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("", dashboard_views.home_page, name="home"),
     path("dashboard/", dashboard_views.user_dashboard_page, name="dashboard"),
+    path("dashboard/admin/", RedirectView.as_view(pattern_name="admin_dashboard", permanent=False)),
     path("admin-dashboard/", dashboard_views.admin_dashboard_page, name="admin_dashboard"),
     path("admin-dashboard/reports/", dashboard_views.admin_reports_page, name="admin_reports_page"),
     path("login/", account_views.login_page, name="login"),

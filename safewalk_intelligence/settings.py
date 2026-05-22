@@ -1,5 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
+from tempfile import gettempdir
 
 from decouple import config, Csv
 
@@ -90,12 +91,16 @@ if DATABASE_URL:
         )
     }
 else:
+    sqlite_path = Path(gettempdir()) / "safewalk_intelligence.sqlite3" if IS_VERCEL else BASE_DIR / "db.sqlite3"
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": sqlite_path,
         }
     }
+
+VERCEL_AUTO_MIGRATE = config("VERCEL_AUTO_MIGRATE", default=IS_VERCEL and not DATABASE_URL, cast=bool)
+VERCEL_SEED_DATA = config("VERCEL_SEED_DATA", default=VERCEL_AUTO_MIGRATE, cast=bool)
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
