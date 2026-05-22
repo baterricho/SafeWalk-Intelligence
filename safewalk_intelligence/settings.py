@@ -13,12 +13,31 @@ DEBUG_DEFAULT = "False" if IS_VERCEL else "True"
 DEBUG_RAW = str(config("DEBUG", default=DEBUG_DEFAULT)).strip().lower()
 DEBUG = DEBUG_RAW not in {"0", "false", "no", "off", "production", "prod"}
 
-ALLOWED_HOSTS = list(config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.vercel.app", cast=Csv()))
+ALLOWED_HOSTS = list(config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.vercel.app,safe-walk-intelligence.vercel.app", cast=Csv()))
 VERCEL_URL = config("VERCEL_URL", default="")
 if VERCEL_URL and VERCEL_URL not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(VERCEL_URL)
-if ".vercel.app" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(".vercel.app")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
 
 OPENWEATHER_API_KEY = config("OPENWEATHER_API_KEY", default=None)
 BLOB_READ_WRITE_TOKEN = config("BLOB_READ_WRITE_TOKEN", default="")

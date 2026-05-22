@@ -8,7 +8,10 @@ from accounts import views as account_views
 from dashboard import views as dashboard_views
 
 
+from .views import health_check
+
 urlpatterns = [
+    path("health/", health_check, name="health_check"),
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/", include("reports.urls")),

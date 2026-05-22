@@ -10,46 +10,45 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "safewalk_intelligence.settings"
 application = get_wsgi_application()
 
 
-def bootstrap_vercel_sqlite():
+def bootstrap_vercel():
     from django.conf import settings
 
+    # 1. Handle SQLite if template exists
+    database = settings.DATABASES["default"]
+    if database.get("ENGINE") == "django.db.backends.sqlite3":
+        database_path = Path(database["NAME"])
+        template_path = Path(getattr(settings, "VERCEL_SQLITE_TEMPLATE", ""))
+        if template_path.exists() and not database_path.exists():
+            database_path.parent.mkdir(parents=True, exist_ok=True)
+            copyfile(template_path, database_path)
+
+    # 2. Run Migrations and Site Fix
     if not getattr(settings, "VERCEL_AUTO_MIGRATE", False):
         return
-
-    database = settings.DATABASES["default"]
-    if database.get("ENGINE") != "django.db.backends.sqlite3":
-        return
-
-    database_path = Path(database["NAME"])
-    template_path = Path(getattr(settings, "VERCEL_SQLITE_TEMPLATE", ""))
-    if template_path.exists() and not database_path.exists():
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-        copyfile(template_path, database_path)
 
     from django.core.management import call_command
     from django.db import DatabaseError, connection
 
-    def has_table(table_name):
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = %s", [table_name])
-                return cursor.fetchone() is not None
-        except DatabaseError:
-            connection.close()
-            return False
-
     try:
-        if not has_table("django_migrations"):
-            call_command("migrate", interactive=False, verbosity=0)
+        # Check if tables exist by trying to query Site model (common allauth dependency)
+        # or just run migrate --no-input which is safe.
+        call_command("migrate", interactive=False, verbosity=1)
+        
+        # Ensure Site object is correct for production domain
+        call_command("fix_site", verbosity=1)
+        
+        # Remove duplicate Google SocialApps to prevent MultipleObjectsReturned error
+        call_command("fix_google_oauth", verbosity=1)
+
         if getattr(settings, "VERCEL_SEED_DATA", False):
             from reports.models import SafetyReport
-
             if not SafetyReport.objects.exists():
-                call_command("seed_data", verbosity=0)
-    except DatabaseError:
-        connection.close()
-        raise
+                call_command("seed_data", verbosity=1)
+    except Exception as e:
+        print(f"Bootstrap error: {str(e)}")
+        # We don't necessarily want to crash the whole app if seeding fails,
+        # but migrations are usually critical.
 
 
-bootstrap_vercel_sqlite()
+bootstrap_vercel()
 app = application

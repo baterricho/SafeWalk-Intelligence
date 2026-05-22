@@ -28,21 +28,23 @@ class VercelBlobStorage(Storage):
 
         try:
             from vercel.blob import put
-        except ImportError:
+            
+            blob_path = self._unique_blob_path(name)
+            content_type = getattr(content, "content_type", None) or mimetypes.guess_type(blob_path)[0]
+            body = b"".join(content.chunks()) if hasattr(content, "chunks") else content.read()
+            blob = put(
+                blob_path,
+                body,
+                access="public",
+                content_type=content_type,
+                token=self.token,
+                overwrite=False,
+            )
+            return blob.url
+        except Exception as e:
+            # Fallback to local storage if Vercel Blob fails for any reason
+            print(f"Vercel Blob storage error: {str(e)}")
             return self.local_storage.save(name, content)
-
-        blob_path = self._unique_blob_path(name)
-        content_type = getattr(content, "content_type", None) or mimetypes.guess_type(blob_path)[0]
-        body = b"".join(content.chunks()) if hasattr(content, "chunks") else content.read()
-        blob = put(
-            blob_path,
-            body,
-            access="public",
-            content_type=content_type,
-            token=self.token,
-            overwrite=False,
-        )
-        return blob.url
 
     def delete(self, name):
         if self._is_remote_url(name) and self.using_blob:

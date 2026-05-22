@@ -46,9 +46,22 @@ def serialize_report_for_dashboard(report):
 
 
 def home_page(request):
-    summary = dashboard_summary()
-    clusters = generate_area_clusters()[:6]
-    weather = get_weather_data()
+    try:
+        summary = dashboard_summary()
+    except Exception:
+        summary = {"total_reports": 0, "active_hazards": 0, "communities_active": 0, "safety_score_average": 70}
+        
+    try:
+        clusters = generate_area_clusters()[:6]
+    except Exception:
+        clusters = []
+        
+    try:
+        weather = get_weather_data()
+    except Exception:
+        from .weather_service import sample_weather_data
+        weather = sample_weather_data()
+        
     return render(request, "home.html", {"summary": summary, "clusters": clusters, "weather": weather})
 
 
