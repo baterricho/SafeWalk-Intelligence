@@ -67,7 +67,7 @@
                     <td><a href="{% url 'report_detail' report.pk %}">{{ report.title }}</a><div class="small text-muted">{{ report.location_name }}</div></td>
                     <td>{{ report.get_category_display }}</td>
                     <td><span class="badge risk-{{ report.risk_level }}">{{ report.get_risk_level_display }}</span></td>
-                    <td><span data-score-cell="{{ report.id }}">{{ report.evidence_score }}</span> - <span data-credibility-cell="{{ report.id }}">{{ report.get_credibility_label_display }}</span></td>
+                    <td><span data-score-cell="{{ report.id }}">{{ report.credibility_score }}</span> - <span data-credibility-cell="{{ report.id }}">{{ report.get_credibility_label_display }}</span></td>
                     <td>
                         <select class="form-select form-select-sm admin-status-select" data-report-id="{{ report.id }}">
                             {% for value, label in status_choices %}

@@ -190,6 +190,7 @@ def report_feedback_counts(report):
         "confirmation_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED).count(),
         "dispute_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.DISPUTED).count(),
         "resolved_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.RESOLVED).count(),
+        "evidence_needed_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.NEEDS_MORE_EVIDENCE).count(),
         "comment_count": confirmations.exclude(comment__exact="").count(),
     }
 

@@ -63,7 +63,9 @@ class SafetyReport(models.Model):
         UNVERIFIED = "unverified", "Unverified"
         COMMUNITY_SUPPORTED = "community_supported", "Community Supported"
         STRONG_EVIDENCE = "strong_evidence", "Strong Evidence"
+        HIGHLY_CREDIBLE = "highly_credible", "Highly Credible"
         ADMIN_VERIFIED = "admin_verified", "Admin Verified"
+        REJECTED = "rejected_not_credible", "Rejected / Not Credible"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -109,6 +111,10 @@ class SafetyReport(models.Model):
     )
     evidence_score = models.PositiveSmallIntegerField(
         default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    credibility_score = models.PositiveSmallIntegerField(
+        default=30,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
     credibility_label = models.CharField(
@@ -159,16 +165,21 @@ class SafetyReport(models.Model):
         return self.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.RESOLVED).count()
 
     @property
+    def evidence_needed_count(self):
+        return self.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.NEEDS_MORE_EVIDENCE).count()
+
+    @property
     def comment_count(self):
         return self.confirmations.exclude(comment__exact="").count()
 
 
 class ReportConfirmation(models.Model):
     class ConfirmationType(models.TextChoices):
-        COMMENT = "comment", "Comment"
         CONFIRMED = "confirmed", "Confirmed"
         DISPUTED = "disputed", "Disputed"
         RESOLVED = "resolved_by_community", "Resolved by Community"
+        NEEDS_MORE_EVIDENCE = "needs_more_evidence", "Needs More Evidence"
+        COMMENT = "comment", "Comment"
 
     report = models.ForeignKey(SafetyReport, on_delete=models.CASCADE, related_name="confirmations")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="report_confirmations")
@@ -188,10 +199,11 @@ class ReportConfirmation(models.Model):
     @property
     def feedback_label(self):
         labels = {
-            self.ConfirmationType.COMMENT: "Community update",
             self.ConfirmationType.CONFIRMED: "I also saw this",
-            self.ConfirmationType.RESOLVED: "Marked as resolved",
             self.ConfirmationType.DISPUTED: "Reported as inaccurate",
+            self.ConfirmationType.RESOLVED: "Marked as resolved",
+            self.ConfirmationType.NEEDS_MORE_EVIDENCE: "Needs more evidence",
+            self.ConfirmationType.COMMENT: "Community update",
         }
         return labels.get(self.confirmation_type, self.get_confirmation_type_display())
 

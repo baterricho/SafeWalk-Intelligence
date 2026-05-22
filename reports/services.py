@@ -64,45 +64,96 @@ def calculate_report_decay(report):
     return round(min(decay, 1.0), 2)
 
 
-def calculate_evidence_score(report):
-    score = 10
-    if len((report.description or "").strip()) >= 40:
-        score += 20
+def calculate_report_credibility(report):
+    """
+    Calculates the report credibility score (0-100) based on community feedback,
+    photo evidence, trusted reporters, and admin verification.
+    """
+    if report.status == SafetyReport.Status.REJECTED:
+        return {"score": 5, "label": SafetyReport.CredibilityLabel.REJECTED}
+
+    score = 30  # Base score
+
+    # 1. Photo Evidence
     if report.photo:
         score += 20
 
-    confirmations = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED).count()
-    resolved_votes = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.RESOLVED).count()
-    disputes = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.DISPUTED).count()
+    # 2. Community Feedback
+    confirmations = report.confirmations.select_related("user__profile").all()
+    
+    for feedback in confirmations:
+        is_trusted = getattr(feedback.user.profile, "role", "") == UserProfile.ROLE_TRUSTED
+        
+        if feedback.confirmation_type == ReportConfirmation.ConfirmationType.CONFIRMED:
+            score += 8 if is_trusted else 5
+        elif feedback.confirmation_type == ReportConfirmation.ConfirmationType.DISPUTED:
+            score -= 10 if is_trusted else 7
+        elif feedback.confirmation_type == ReportConfirmation.ConfirmationType.NEEDS_MORE_EVIDENCE:
+            score -= 2
+        elif feedback.confirmation_type == ReportConfirmation.ConfirmationType.RESOLVED:
+            # Each Resolved feedback from community while report is still Pending or Verified: -4
+            if report.status in [SafetyReport.Status.PENDING, SafetyReport.Status.VERIFIED]:
+                score -= 4
 
-    score += min(25, confirmations * 7)
-    score += min(8, resolved_votes * 2)
-    score -= min(25, disputes * 8)
-
+    # 3. Admin Verification and Status
     if report.status == SafetyReport.Status.VERIFIED:
         score += 30
-    elif report.status == SafetyReport.Status.REJECTED:
-        score -= 30
+    elif report.status == SafetyReport.Status.IN_PROGRESS:
+        score += 15
+    elif report.status == SafetyReport.Status.RESOLVED:
+        score += 10
 
-    score = int(clamp(score))
-    if report.status == SafetyReport.Status.VERIFIED:
+    # 4. Age Decay
+    # Report is old and has no recent confirmation: -5 to -15 depending on age
+    age_days = (timezone.now() - report.created_at).days if report.created_at else 0
+    recent_cutoff = timezone.now() - timedelta(days=14)
+    has_recent_confirmation = report.confirmations.filter(
+        created_at__gte=recent_cutoff,
+        confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED
+    ).exists()
+
+    if not has_recent_confirmation and age_days > 14:
+        if age_days <= 30:
+            score -= 5
+        elif age_days <= 60:
+            score -= 10
+        else:
+            score -= 15
+
+    score = clamp(score)
+
+    # 5. Determine Label
+    if report.status == SafetyReport.Status.REJECTED:
+        label = SafetyReport.CredibilityLabel.REJECTED
+    elif report.status == SafetyReport.Status.VERIFIED:
         label = SafetyReport.CredibilityLabel.ADMIN_VERIFIED
-    elif score >= 75:
+    elif score >= 81:
+        label = SafetyReport.CredibilityLabel.HIGHLY_CREDIBLE
+    elif score >= 61:
         label = SafetyReport.CredibilityLabel.STRONG_EVIDENCE
-    elif confirmations >= 2:
+    elif score >= 31:
         label = SafetyReport.CredibilityLabel.COMMUNITY_SUPPORTED
     else:
         label = SafetyReport.CredibilityLabel.UNVERIFIED
 
-    return {"score": score, "label": label}
+    return {"score": int(score), "label": label}
+
+
+def calculate_evidence_score(report):
+    # Keeping this for backward compatibility if needed, 
+    # but we'll use calculate_report_credibility for the new system.
+    return calculate_report_credibility(report)
 
 
 def calculate_safety_score(report):
     decay = calculate_report_decay(report)
-    evidence = calculate_evidence_score(report)["score"]
-    confirmations = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED).count()
-    disputes = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.DISPUTED).count()
-    resolved_votes = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.RESOLVED).count()
+    credibility = calculate_report_credibility(report)["score"]
+    
+    counts = report.confirmations.values("confirmation_type").annotate(total=Count("id"))
+    counter = {item["confirmation_type"]: item["total"] for item in counts}
+    confirmations = counter.get(ReportConfirmation.ConfirmationType.CONFIRMED, 0)
+    disputes = counter.get(ReportConfirmation.ConfirmationType.DISPUTED, 0)
+    resolved_votes = counter.get(ReportConfirmation.ConfirmationType.RESOLVED, 0)
 
     related_reports = SafetyReport.objects.filter(
         status__in=[SafetyReport.Status.PENDING, SafetyReport.Status.VERIFIED, SafetyReport.Status.IN_PROGRESS],
@@ -152,7 +203,7 @@ def calculate_safety_score(report):
 
     trust_score = getattr(getattr(report.user, "profile", None), "trust_score", 50) if report.user else 50
     penalty += ((trust_score - 50) / 50) * 9
-    penalty += ((evidence - 50) / 50) * 8
+    penalty += ((credibility - 50) / 50) * 8
 
     decayed_penalty = max(0, penalty) * decay
     score = 100 - decayed_penalty
@@ -160,12 +211,18 @@ def calculate_safety_score(report):
 
 
 def refresh_report_intelligence(report, save=True):
-    evidence = calculate_evidence_score(report)
-    report.evidence_score = evidence["score"]
-    report.credibility_label = evidence["label"]
+    credibility = calculate_report_credibility(report)
+    report.credibility_score = credibility["score"]
+    report.credibility_label = credibility["label"]
+    
+    # Update evidence_score as well for backward compatibility if it's used elsewhere
+    report.evidence_score = credibility["score"]
+    
     report.safety_score = calculate_safety_score(report)
+    
     if save:
         SafetyReport.objects.filter(pk=report.pk).update(
+            credibility_score=report.credibility_score,
             evidence_score=report.evidence_score,
             credibility_label=report.credibility_label,
             safety_score=report.safety_score,

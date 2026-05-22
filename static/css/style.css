@@ -304,6 +304,11 @@ body {
     color: #991b1b;
 }
 
+.feedback-needs_more_evidence {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
 .line-clamp {
     display: -webkit-box;
     -webkit-line-clamp: 3;

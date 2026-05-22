@@ -42,16 +42,16 @@
     </div>
     <div class="col-md-3">
         <div class="metric-card">
-            <span>Risk Level</span>
-            <strong>{{ report.get_risk_level_display }}</strong>
-            <small>Reported severity.</small>
+            <span>Report Credibility</span>
+            <strong>{{ report.credibility_score }} / 100</strong>
+            <small>{{ report.get_credibility_label_display }}</small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="metric-card">
-            <span>Community</span>
+            <span>Community Signals</span>
             <strong>{{ feedback_counts.confirmation_count }}</strong>
-            <small>Confirmations from other users.</small>
+            <small>{{ feedback_counts.dispute_count }} disputes · {{ feedback_counts.resolved_count }} resolved</small>
         </div>
     </div>
     <div class="col-md-3">
@@ -73,8 +73,11 @@
                 <div class="col-sm-6"><strong>Lighting condition:</strong> {{ report.get_lighting_condition_display }}</div>
                 <div class="col-sm-6"><strong>Crowd level:</strong> {{ report.get_crowd_level_display }}</div>
                 <div class="col-sm-6"><strong>Visibility:</strong> {{ report.get_visibility_level_display }}</div>
-                <div class="col-sm-6"><strong>Evidence:</strong> {{ report.get_credibility_label_display }}</div>
+                <div class="col-sm-6"><strong>Evidence Label:</strong> {{ report.get_credibility_label_display }}</div>
             </div>
+            <p class="small text-muted mt-3 mb-0">
+                <i class="bi bi-info-circle"></i> Credibility changes based on photo evidence, citizen feedback, trusted reporters, and admin verification.
+            </p>
         </div>
 
         <div class="map-card mb-4">
@@ -113,22 +116,26 @@
     <div class="col-lg-5">
         <section class="section-panel mb-4">
             <h2 class="h4">Community Feedback</h2>
-            <p class="text-muted">Confirm what you saw, mark this as resolved, dispute inaccurate details, or share a comment.</p>
+            <p class="text-muted">Help others by sharing what you know about this report.</p>
             {% if user.is_authenticated %}
                 <form method="post" class="community-feedback-form">
                     {% csrf_token %}
                     <div class="d-grid gap-2">
                         <button name="confirmation_type" value="confirmed" class="btn btn-outline-success">
                             I also saw this
-                            <span class="d-block small">The issue is still happening.</span>
+                            <span class="d-block small">Confirm the issue is still happening.</span>
+                        </button>
+                        <button name="confirmation_type" value="disputed" class="btn btn-outline-danger">
+                            This report is inaccurate
+                            <span class="d-block small">The report is false or no longer true.</span>
                         </button>
                         <button name="confirmation_type" value="resolved_by_community" class="btn btn-outline-primary">
                             This is already resolved
                             <span class="d-block small">The problem has already been fixed.</span>
                         </button>
-                        <button name="confirmation_type" value="disputed" class="btn btn-outline-danger">
-                            This report is inaccurate
-                            <span class="d-block small">The report may be false or no longer true.</span>
+                        <button name="confirmation_type" value="needs_more_evidence" class="btn btn-outline-warning">
+                            Needs more evidence
+                            <span class="d-block small">More photos or details are needed.</span>
                         </button>
                     </div>
                     <label class="form-label mt-3" for="confirmation-comment">Add a comment or update</label>
@@ -138,24 +145,25 @@
                         name="comment"
                         maxlength="500"
                         rows="3"
-                        placeholder="Example: I passed by this area today and the street light is still broken."
+                        placeholder="Example: I passed by this area tonight and the street light is still broken."
                     ></textarea>
-                    <button class="btn btn-safewalk mt-3" name="confirmation_type" value="comment" type="submit">
+                    <button class="btn btn-safewalk mt-3 w-100" name="confirmation_type" value="comment" type="submit">
                         Share update
                     </button>
                 </form>
             {% else %}
-                <p><a href="{% url 'login' %}">Login</a> to comment, confirm, dispute, or mark this report as resolved.</p>
+                <p><a href="{% url 'login' %}">Login</a> to share feedback or comments on this report.</p>
             {% endif %}
         </section>
 
         <section class="section-panel">
             <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                 <div>
-                    <h2 class="h4 mb-1">Community Comments</h2>
+                    <h2 class="h4 mb-1">Community Activity</h2>
                     <p class="small text-muted mb-0">
-                        {{ feedback_counts.confirmation_count }} confirmations -
-                        {{ feedback_counts.dispute_count }} disputes -
+                        {{ feedback_counts.confirmation_count }} confirmed ·
+                        {{ feedback_counts.dispute_count }} disputed ·
+                        {{ feedback_counts.resolved_count }} resolved ·
                         {{ feedback_counts.comment_count }} comments
                     </p>
                 </div>

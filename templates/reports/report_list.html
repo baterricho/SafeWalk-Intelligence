@@ -75,13 +75,17 @@
                 </div>
 
                 <div class="community-line small mb-3">
-                    {{ report.confirmation_count }} confirmations - {{ report.dispute_count }} disputes - {{ report.comment_count }} comments
+                    <div class="mb-1">
+                        <strong>{{ report.get_credibility_label_display }}</strong> · {{ report.credibility_score }} / 100
+                    </div>
+                    <div>
+                        {{ report.confirmation_count }} confirmations · {{ report.dispute_count }} disputes · {{ report.comment_count }} comments
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-between align-items-end gap-2">
                     <div class="small text-muted">
-                        <div><strong>Credibility:</strong> {{ report.get_credibility_label_display }}</div>
-                        <div>Reported {{ report.created_at|date:"M d, Y" }}</div>
+                        Reported {{ report.created_at|date:"M d, Y" }}
                     </div>
                     <a class="btn btn-sm btn-outline-primary" href="{% url 'report_detail' report.pk %}">View Details</a>
                 </div>
