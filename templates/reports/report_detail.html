@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}{{ report.title }} | SafeWalk{% endblock %}
+{% block content %}
+<div class="report-header-card mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <p class="eyebrow text-dark">{{ report.get_category_display }}</p>
+            <h1 class="page-title">{{ report.title }}</h1>
+            <p class="mb-1"><strong>Location:</strong> {{ report.location_name }}</p>
+            <p class="text-muted mb-0">
+                Reported by {{ reporter_display }} - {{ report.created_at|date:"M d, Y" }}
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-start">
+            <span class="badge status-{{ report.status }}">{{ report.get_status_display }}</span>
+            <span class="badge risk-{{ report.risk_level }}">{{ report.get_risk_level_display }}</span>
+            {% if user == report.user or user.is_staff %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'report_edit' report.pk %}">Edit</a>
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'report_delete' report.pk %}">Delete</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-card {% if report.safety_score <= 30 %}danger{% elif report.safety_score >= 81 %}safe{% endif %}">
+            <span>Safety Score</span>
+            <strong>{{ report.safety_score }} / 100</strong>
+            <small>{{ report.score_label }} - Lower score means higher danger.</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <span>Risk Level</span>
+            <strong>{{ report.get_risk_level_display }}</strong>
+            <small>Based on reported severity.</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <span>Evidence Strength</span>
+            <strong>{{ report.evidence_score }} / 100</strong>
+            <small>{{ report.get_credibility_label_display }} - Based on photo, confirmations, and admin review.</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card">
+            <span>Report Status</span>
+            <strong>{{ report.get_status_display }}</strong>
+            <small>Current handling status.</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="section-panel">
+            <h2>What happened?</h2>
+            <p>{{ report.description }}</p>
+            <div class="row g-2 small">
+                <div class="col-sm-6"><strong>Time observed:</strong> {{ report.time_observed|time:"g:i A" }}</div>
+                <div class="col-sm-6"><strong>Day type:</strong> {{ report.get_day_type_display }}</div>
+                <div class="col-sm-6"><strong>Lighting condition:</strong> {{ report.get_lighting_condition_display }}</div>
+                <div class="col-sm-6"><strong>Crowd level:</strong> {{ report.get_crowd_level_display }}</div>
+                <div class="col-sm-6"><strong>Visibility level:</strong> {{ report.get_visibility_level_display }}</div>
+                <div class="col-sm-6">
+                    <strong>Location pin:</strong>
+                    {% if is_admin_viewer %}
+                        {{ report.latitude }}, {{ report.longitude }}
+                    {% else %}
+                        Pinned location is shown on the map.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="section-panel mt-4">
+            <h2>Photo Evidence</h2>
+            {% if report.photo %}
+                <img class="report-photo" src="{{ report.photo.url }}" alt="Photo evidence for {{ report.title }}">
+            {% else %}
+                <p class="text-muted mb-0">No photo evidence uploaded.</p>
+            {% endif %}
+        </div>
+
+        <div class="section-panel mt-4">
+            <h2>Risk by Time of Day</h2>
+            <div class="timeline-grid">
+                {% for item in timeline %}
+                    <div class="timeline-pill">
+                        <strong>{{ item.time_period }}</strong>
+                        <span>{{ item.risk_label }}</span>
+                        {% if item.average_safety_score %}
+                            <small>Score {{ item.average_safety_score }} - {{ item.total_reports }} related reports</small>
+                        {% else %}
+                            <small>No reports yet for this time.</small>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="section-panel mt-4">
+            <h2>Admin Action History</h2>
+            {% for item in history %}
+                <div class="history-item">
+                    <strong>{{ item.get_old_status_display }} &rarr; {{ item.get_new_status_display }}</strong>
+                    <p class="mb-0">{{ item.admin_note|default:"No note provided." }}</p>
+                    <small class="text-muted">{{ item.created_at|date:"M d, Y g:i A" }}</small>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">No admin actions yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="map-card mb-4">
+            <h2 class="h5 mb-1">Pinned Location</h2>
+            <p class="small text-muted">This pin shows where the safety issue was reported.</p>
+            <div
+                id="report-detail-map"
+                class="detail-map"
+                data-lat="{{ report.latitude }}"
+                data-lng="{{ report.longitude }}"
+                data-title="{{ report.title }}"
+                data-risk="{{ report.get_risk_level_display }}"
+                data-risk-key="{{ report.risk_level }}"
+                data-status="{{ report.get_status_display }}"
+            ></div>
+        </div>
+
+        <div class="section-panel mb-4">
+            <h2>Help Update This Report</h2>
+            <p class="text-muted">Seen this location recently? Help others by confirming if this report is still accurate.</p>
+            {% if user.is_authenticated %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button name="confirmation_type" value="confirmed" class="btn btn-outline-success">
+                            I also saw this
+                            <span class="d-block small">The issue is still happening.</span>
+                        </button>
+                        <button name="confirmation_type" value="resolved_by_community" class="btn btn-outline-primary">
+                            This is already resolved
+                            <span class="d-block small">The problem has already been fixed.</span>
+                        </button>
+                        <button name="confirmation_type" value="disputed" class="btn btn-outline-danger">
+                            This report is inaccurate
+                            <span class="d-block small">The report may be false or no longer true.</span>
+                        </button>
+                        <button name="confirmation_type" value="needs_review" class="btn btn-outline-warning">
+                            Needs admin review
+                            <span class="d-block small">The report needs checking by an admin.</span>
+                        </button>
+                    </div>
+                    <label class="form-label mt-3" for="confirmation-comment">Add an optional update</label>
+                    <textarea
+                        id="confirmation-comment"
+                        class="form-control"
+                        name="comment"
+                        maxlength="500"
+                        rows="3"
+                        placeholder="Example: The street light is still broken as of tonight."
+                    ></textarea>
+                </form>
+            {% else %}
+                <p><a href="{% url 'login' %}">Login</a> to confirm, dispute, or mark this report as resolved.</p>
+            {% endif %}
+        </div>
+
+        <div class="section-panel">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                    <h2 class="mb-1">Community Feedback & Comments</h2>
+                    <p class="small text-muted mb-0">
+                        {{ feedback_counts.confirmation_count }} confirmations -
+                        {{ feedback_counts.dispute_count }} disputes -
+                        {{ feedback_counts.comment_count }} comments
+                    </p>
+                </div>
+            </div>
+            {% for confirmation in confirmations %}
+                <div class="feedback-card">
+                    <div class="d-flex justify-content-between gap-2 flex-wrap">
+                        <span class="badge feedback-{{ confirmation.confirmation_type }}">{{ confirmation.feedback_label }}</span>
+                        <small class="text-muted">{{ confirmation.created_at|date:"M d, Y g:i A" }}</small>
+                    </div>
+                    <p class="mb-1 mt-2">
+                        {% if confirmation.comment %}
+                            {{ confirmation.comment }}
+                        {% else %}
+                            <span class="text-muted">No comment provided.</span>
+                        {% endif %}
+                    </p>
+                    <small class="text-muted">By {{ confirmation.user.username|default:"Anonymous User" }}</small>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">No community comments yet. Be the first to share an update.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    window.SafeWalkReportMap.init("report-detail-map");
+});
+</script>
+{% endblock %}

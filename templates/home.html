@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}SafeWalk Intelligence | Walking Safety System{% endblock %}
+{% block body_class %}landing-body{% endblock %}
+{% block site_nav %}{% endblock %}
+{% block main_class %}landing-main{% endblock %}
+{% block content_container_class %}landing-container{% endblock %}
+{% block content %}
+<div class="landing-page landing-v2">
+    <nav class="landing-nav" aria-label="Landing page navigation">
+        <a class="landing-brand" href="{% url 'home' %}">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 48 48" role="img" focusable="false">
+                    <path d="M24 4 8 10v12c0 10.6 6.8 18.6 16 22 9.2-3.4 16-11.4 16-22V10L24 4Z" fill="currentColor" opacity=".18"/>
+                    <path d="M24 4 8 10v12c0 10.6 6.8 18.6 16 22 9.2-3.4 16-11.4 16-22V10L24 4Z" fill="none" stroke="currentColor" stroke-width="3"/>
+                    <circle cx="24" cy="21" r="5" fill="currentColor"/>
+                    <path d="M24 26v9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+            </span>
+            <span>
+                <strong>SafeWalk</strong>
+                <small>Intelligence</small>
+            </span>
+        </a>
+
+        <div class="landing-nav-links">
+            <a href="{% url 'home' %}">Home</a>
+            <a href="{% url 'report_list' %}">Reports</a>
+            <a href="{% url 'my_routes' %}">Safe Routes</a>
+            <a href="#weather">Weather</a>
+            <a href="#features">About</a>
+            <a href="#contact">Contact</a>
+        </div>
+
+        <div class="landing-nav-actions">
+            {% if user.is_authenticated %}
+                <a class="btn btn-outline-secondary" href="{% url 'dashboard' %}">Dashboard</a>
+                <a class="btn btn-safewalk" href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                <a class="btn btn-outline-secondary" href="{% url 'login' %}">Login</a>
+                <a class="btn btn-safewalk" href="{% url 'signup' %}">Sign Up</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <section class="hero-section" id="home">
+        <div class="hero-content">
+            <span class="hero-pill">Community-Powered Walking Safety</span>
+            <h1 class="hero-title">SafeWalk Intelligence</h1>
+            <p class="hero-subtitle">
+                A community-powered walking safety system that helps users report unsafe areas,
+                check walking risks, and find safer routes.
+            </p>
+
+            <div class="hero-actions">
+                <a href="{% url 'report_create' %}" class="btn btn-safewalk btn-lg">Report Unsafe Area</a>
+                <a href="{% url 'report_list' %}" class="btn btn-light btn-lg border">View Safety Reports</a>
+                <a href="{% url 'my_routes' %}" class="btn btn-outline-primary btn-lg">Check Safe Routes</a>
+            </div>
+
+            <div class="hero-stat-grid" aria-label="SafeWalk platform statistics">
+                <div><strong>1,248</strong><span>Active Reports</span></div>
+                <div><strong>87%</strong><span>Reports Verified</span></div>
+                <div><strong>2,531</strong><span>Community Confirmations</span></div>
+                <div><strong>98</strong><span>Safer Routes Saved</span></div>
+            </div>
+        </div>
+
+        <div class="hero-video-card">
+            <div class="hero-video-wrapper">
+                <video autoplay muted loop playsinline preload="metadata" class="hero-video">
+                    <source src="{% static 'videos/safewalk-walking-animation.original.mp4' %}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+    </section>
+
+    <section class="weather-page landing-weather-section" id="weather" data-weather-panel data-weather-lat="9.7786" data-weather-lng="118.7353" data-weather-location="Tiniguiban, Puerto Princesa City">
+        <div class="weather-section-heading">
+            <span class="section-pill">Weather-Aware Safety</span>
+            <h2>Weather-Aware Walking Safety</h2>
+            <p>Plan safer walks around heat, rain, wind, thunderstorms, flooding risk, and low visibility.</p>
+        </div>
+
+        <div class="weather-card weather-dashboard-card" aria-live="polite">
+            <div class="weather-dashboard-topline">
+                <div>
+                    <span class="weather-dashboard-kicker">SafeWalk live forecast</span>
+                    <h3>Live Walking Forecast</h3>
+                </div>
+                <span class="weather-risk-pill">
+                    Walking Risk: <strong data-weather-risk-level>High</strong>
+                </span>
+            </div>
+
+            <div class="weather-header">
+                <div class="weather-location">
+                    <i class="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                    <strong data-weather-location-name>Tiniguiban, Puerto Princesa City</strong>
+                </div>
+                <div class="weather-actions">
+                    <button class="precise-location-btn" type="button" data-weather-location>
+                        <i class="bi bi-crosshair" aria-hidden="true"></i>
+                        Use precise location
+                    </button>
+                    <button class="weather-menu-btn" type="button" data-weather-refresh aria-label="Refresh weather forecast">
+                        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="current-weather-grid">
+                <div class="weather-main">
+                    <div class="weather-icon">
+                        <img class="weather-icon-img" data-weather-current-icon-img alt="" hidden>
+                        <i class="bi bi-cloud-lightning-rain" data-weather-primary-icon aria-hidden="true"></i>
+                    </div>
+                    <div class="weather-temp">
+                        <span data-weather-current-temp>33</span><sup>°C</sup>
+                    </div>
+                    <dl class="weather-meta">
+                        <div><dt>Precipitation:</dt><dd data-weather-current-precipitation>45%</dd></div>
+                        <div><dt>Humidity:</dt><dd data-weather-current-humidity>72%</dd></div>
+                        <div><dt>Wind:</dt><dd data-weather-current-wind>8 km/h</dd></div>
+                    </dl>
+                </div>
+
+                <div class="weather-condition-box">
+                    <h3>Weather</h3>
+                    <span data-weather-current-day>Friday</span>
+                    <strong data-weather-primary-condition>Scattered thunderstorms</strong>
+                </div>
+            </div>
+
+            <div class="weather-tabs" role="tablist" aria-label="Weather graph type">
+                <button class="weather-tab active" type="button" data-weather-tab="temperature" role="tab" aria-selected="true">Temperature</button>
+                <button class="weather-tab" type="button" data-weather-tab="precipitation" role="tab" aria-selected="false">Precipitation</button>
+                <button class="weather-tab" type="button" data-weather-tab="wind" role="tab" aria-selected="false">Wind</button>
+            </div>
+
+            <div class="weather-chart" data-weather-chart>
+                <svg viewBox="0 0 760 150" role="img" aria-label="Hourly temperature graph">
+                    <path d="M0 72 L110 72 L220 88 L330 104 L440 110 L550 110 L660 110 L760 86 L760 150 L0 150 Z" fill="#fef3c7"/>
+                    <path d="M0 72 L110 72 L220 88 L330 104 L440 110 L550 110 L660 110 L760 86" fill="none" stroke="#fbbc04" stroke-width="3"/>
+                </svg>
+            </div>
+
+            <div class="forecast-row" data-weather-list>
+                <article class="forecast-day-card active">
+                    <span>Fri</span>
+                    <i class="bi bi-cloud-lightning-rain" aria-hidden="true"></i>
+                    <strong>33°</strong>
+                    <small>28°</small>
+                </article>
+                <article class="forecast-day-card">
+                    <span>Sat</span>
+                    <i class="bi bi-cloud-lightning-rain" aria-hidden="true"></i>
+                    <strong>33°</strong>
+                    <small>27°</small>
+                </article>
+                <article class="forecast-day-card">
+                    <span>Sun</span>
+                    <i class="bi bi-cloud-rain-heavy" aria-hidden="true"></i>
+                    <strong>32°</strong>
+                    <small>27°</small>
+                </article>
+                <article class="forecast-day-card">
+                    <span>Mon</span>
+                    <i class="bi bi-cloud-rain" aria-hidden="true"></i>
+                    <strong>30°</strong>
+                    <small>27°</small>
+                </article>
+                <article class="forecast-day-card">
+                    <span>Tue</span>
+                    <i class="bi bi-cloud-drizzle" aria-hidden="true"></i>
+                    <strong>32°</strong>
+                    <small>27°</small>
+                </article>
+                <article class="forecast-day-card">
+                    <span>Wed</span>
+                    <i class="bi bi-cloud-drizzle" aria-hidden="true"></i>
+                    <strong>32°</strong>
+                    <small>27°</small>
+                </article>
+                <article class="forecast-day-card">
+                    <span>Thu</span>
+                    <i class="bi bi-cloud-sun" aria-hidden="true"></i>
+                    <strong>33°</strong>
+                    <small>27°</small>
+                </article>
+                <article class="forecast-day-card">
+                    <span>Fri</span>
+                    <i class="bi bi-brightness-high" aria-hidden="true"></i>
+                    <strong>32°</strong>
+                    <small>27°</small>
+                </article>
+            </div>
+
+            <div class="weather-alert danger">
+                <h3 data-weather-alert-title>Excessive Heat</h3>
+                <div class="weather-alert-meta">
+                    <strong data-weather-alert-location>Tiniguiban, Puerto Princesa City</strong>
+                    <span data-weather-alert-time>Updated recently</span>
+                </div>
+                <p data-weather-alert-message>Severe heat is expected in this area.</p>
+            </div>
+
+            <div class="walking-advice-card danger">
+                <div class="walking-advice-header">
+                    <span>Walking Risk: <strong data-weather-risk-level>High</strong></span>
+                    <div class="walking-advice-icons" aria-hidden="true">
+                        <i class="bi bi-thermometer-sun"></i>
+                        <i class="bi bi-umbrella"></i>
+                        <i class="bi bi-wind"></i>
+                        <i class="bi bi-signpost-split"></i>
+                    </div>
+                </div>
+                <p><strong>Advice:</strong> <span data-weather-advice>Avoid long walks during peak heat. Bring water, use shaded routes, and avoid flood-prone shortcuts if rain starts.</span></p>
+            </div>
+
+            <p class="weather-live-status" data-weather-status>Loading weather forecast...</p>
+        </div>
+        {% if weather %}
+            {{ weather|json_script:"weather-dashboard-data" }}
+        {% endif %}
+    </section>
+
+    <section class="features-section" id="features">
+        <div class="section-header">
+            <span class="section-pill">SafeWalk Features</span>
+            <h2>Everything you need for safer walking decisions</h2>
+            <p>
+                SafeWalk combines location reports, evidence, weather context, route notes,
+                and community verification in one practical system.
+            </p>
+        </div>
+
+        <div class="feature-showcase-grid">
+            <article class="feature-showcase-card">
+                <div class="feature-image-wrap">
+                    <img src="{% static 'images/features/pin-unsafe-locations.png' %}" alt="Pin Unsafe Locations feature preview" loading="lazy" decoding="async">
+                </div>
+                <div class="feature-card-body">
+                    <h3>Pin Unsafe Locations</h3>
+                    <p>Click the map to mark exact unsafe locations. Coordinates are saved automatically.</p>
+                </div>
+            </article>
+
+            <article class="feature-showcase-card">
+                <div class="feature-image-wrap">
+                    <img src="{% static 'images/features/upload-photo-evidence.png' %}" alt="Upload Photo Evidence feature preview" loading="lazy" decoding="async">
+                </div>
+                <div class="feature-card-body">
+                    <h3>Upload Photo Evidence</h3>
+                    <p>Upload real photos of unsafe areas to support your reports.</p>
+                </div>
+            </article>
+
+            <article class="feature-showcase-card">
+                <div class="feature-image-wrap">
+                    <img src="{% static 'images/features/weather-aware-safety.png' %}" alt="Weather-Aware Safety feature preview" loading="lazy" decoding="async">
+                </div>
+                <div class="feature-card-body">
+                    <h3>Weather-Aware Safety</h3>
+                    <p>The system checks rain, wind, and temperature to help users understand walking risks.</p>
+                </div>
+            </article>
+
+            <article class="feature-showcase-card">
+                <div class="feature-image-wrap">
+                    <img src="{% static 'images/features/community-feedback.png' %}" alt="Community Feedback feature preview" loading="lazy" decoding="async">
+                </div>
+                <div class="feature-card-body">
+                    <h3>Community Feedback</h3>
+                    <p>Users can confirm, dispute, or comment on reports to keep information updated.</p>
+                </div>
+            </article>
+
+            <article class="feature-showcase-card">
+                <div class="feature-image-wrap">
+                    <img src="{% static 'images/features/save-walking-routes.png' %}" alt="Save Walking Routes feature preview" loading="lazy" decoding="async">
+                </div>
+                <div class="feature-card-body">
+                    <h3>Save Walking Routes</h3>
+                    <p>Pin your start and end points to save and reuse walking routes.</p>
+                </div>
+            </article>
+
+            <article class="feature-showcase-card">
+                <div class="feature-image-wrap">
+                    <img src="{% static 'images/features/admin-verification.png' %}" alt="Admin Verification feature preview" loading="lazy" decoding="async">
+                </div>
+                <div class="feature-card-body">
+                    <h3>Admin Verification</h3>
+                    <p>Admins review reports, verify issues, and update report status.</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="how-it-works">
+        <div class="section-heading centered">
+            <h2>How it works</h2>
+            <p>Report an unsafe walking area in four simple steps.</p>
+        </div>
+        <div class="step-grid">
+            <article class="step-card"><span>1</span><h3>Pin the unsafe location</h3><p>Use the map to select the exact place.</p></article>
+            <article class="step-card"><span>2</span><h3>Describe the safety issue</h3><p>Add category, risk, lighting, crowd level, and details.</p></article>
+            <article class="step-card"><span>3</span><h3>Upload optional photo evidence</h3><p>Help admins and the community verify faster.</p></article>
+            <article class="step-card"><span>4</span><h3>Community and admin verify the report</h3><p>Confirmations and admin action keep data reliable.</p></article>
+        </div>
+    </section>
+
+    <section class="cta-section" id="contact">
+        <div>
+            <p class="landing-eyebrow">Start now</p>
+            <h2>Start walking smarter with SafeWalk Intelligence.</h2>
+            <p>Create reports, explore active safety issues, and save routes for everyday walking.</p>
+        </div>
+        <div class="cta-actions">
+            <a href="{% url 'report_create' %}" class="btn btn-light btn-lg">Create a Report</a>
+            <a href="{% url 'report_list' %}" class="btn btn-outline-light btn-lg">Explore Reports</a>
+            <a href="{% url 'my_routes' %}" class="btn btn-outline-light btn-lg">Save a Route</a>
+        </div>
+    </section>
+</div>
+{% endblock %}

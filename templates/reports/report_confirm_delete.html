@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Delete Report | SafeWalk{% endblock %}
+{% block content %}
+<div class="section-panel">
+    <h1 class="h3">Delete Safety Report</h1>
+    <p>Are you sure you want to delete <strong>{{ report.title }}</strong>?</p>
+    <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+        <a class="btn btn-outline-secondary" href="{% url 'report_detail' report.pk %}">Cancel</a>
+    </form>
+</div>
+{% endblock %}

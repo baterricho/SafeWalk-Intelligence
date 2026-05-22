@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard | SafeWalk{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <p class="eyebrow text-dark">Admin safety operations</p>
+        <h1 class="page-title">Admin Dashboard</h1>
+        <p class="text-muted mb-0">Verify reports, monitor safety heat, and update statuses without leaving the table.</p>
+    </div>
+    <a class="btn btn-outline-primary" href="{% url 'admin_reports_page' %}">Verification Queue</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="metric-card"><span>Total</span><strong>{{ summary.total_reports }}</strong></div></div>
+    <div class="col-md-2"><div class="metric-card danger"><span>Critical</span><strong>{{ summary.active_critical_reports }}</strong></div></div>
+    <div class="col-md-2"><div class="metric-card"><span>Verified</span><strong>{{ summary.verified_reports }}</strong></div></div>
+    <div class="col-md-2"><div class="metric-card safe"><span>Resolved</span><strong>{{ summary.resolved_reports }}</strong></div></div>
+    <div class="col-md-2"><div class="metric-card"><span>Risk Time</span><strong class="fs-5">{{ summary.highest_risk_time_of_day }}</strong></div></div>
+    <div class="col-md-2"><div class="metric-card"><span>Top Area</span><strong class="fs-6">{{ summary.most_reported_area }}</strong></div></div>
+</div>
+
+<div class="section-panel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Current Reports</h2>
+        <span class="small text-muted">Status changes save instantly.</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+            <tr>
+                <th>Report</th>
+                <th>Risk</th>
+                <th>Score</th>
+                <th>Credibility</th>
+                <th>Current Status</th>
+                <th>Reporter</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for report in reports %}
+                <tr data-report-row="{{ report.id }}">
+                    <td>
+                        <a href="{% url 'report_detail' report.pk %}" class="fw-semibold">{{ report.title }}</a>
+                        <div class="small text-muted">{{ report.location_name }}</div>
+                    </td>
+                    <td><span class="badge risk-{{ report.risk_level }}">{{ report.get_risk_level_display }}</span></td>
+                    <td><span class="badge score-badge" data-score-cell="{{ report.id }}">{{ report.safety_score }}</span></td>
+                    <td data-credibility-cell="{{ report.id }}">{{ report.get_credibility_label_display }}</td>
+                    <td>
+                        <select class="form-select form-select-sm admin-status-select" data-report-id="{{ report.id }}">
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if report.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="small text-muted admin-status-message" data-status-message="{{ report.id }}"></div>
+                    </td>
+                    <td>{% if report.user %}{{ report.user.username }}{% else %}Unknown{% endif %}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="text-muted">No reports yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

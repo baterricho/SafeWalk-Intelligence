@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Safety Dashboard | SafeWalk Intelligence{% endblock %}
+{% block content %}
+<div class="dashboard-page">
+    <!-- TOP HEADER AREA -->
+    <div class="dashboard-header d-flex justify-content-between align-items-start flex-wrap gap-3 mb-5">
+        <div>
+            <p class="dashboard-label">Personal Command Center</p>
+            <h1 class="dashboard-title">Safety Dashboard</h1>
+            <p class="dashboard-subtitle">Monitor live reports, inspect risk markers, and track your community safety activity.</p>
+        </div>
+        <div class="dashboard-actions d-flex gap-2">
+            <span class="trust-score-badge">Trust Score: {{ user.profile.trust_score }}</span>
+            <a class="btn btn-safewalk px-4" href="{% url 'report_create' %}">Submit Safety Report</a>
+            <a class="btn btn-outline-teal px-4" href="{% url 'report_list' %}">View Reports</a>
+        </div>
+    </div>
+
+    <!-- SECTION 1: KPI / SUMMARY CARDS -->
+    <div class="stats-grid mb-5">
+        <div class="stat-card blue">
+            <div class="stat-card-header">
+                <div class="stat-card-icon"><i class="bi bi-shield-check"></i></div>
+                <div class="stat-card-accent"></div>
+            </div>
+            <div class="stat-card-body">
+                <strong class="stat-card-value">{{ user.profile.trust_score }}</strong>
+                <span class="stat-card-label">User Trust Score</span>
+                <p class="stat-card-caption">Your credibility in the SafeWalk community.</p>
+            </div>
+        </div>
+        <div class="stat-card teal">
+            <div class="stat-card-header">
+                <div class="stat-card-icon"><i class="bi bi-file-earmark-text"></i></div>
+                <div class="stat-card-accent"></div>
+            </div>
+            <div class="stat-card-body">
+                <strong class="stat-card-value">{{ user_report_count }}</strong>
+                <span class="stat-card-label">My Reports</span>
+                <p class="stat-card-caption">Safety reports you have submitted.</p>
+            </div>
+        </div>
+        <div class="stat-card red">
+            <div class="stat-card-header">
+                <div class="stat-card-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="stat-card-accent"></div>
+            </div>
+            <div class="stat-card-body">
+                <strong class="stat-card-value">{{ summary.active_critical_reports }}</strong>
+                <span class="stat-card-label">Active Critical</span>
+                <p class="stat-card-caption">Critical issues currently needing attention.</p>
+            </div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-card-header">
+                <div class="stat-card-icon"><i class="bi bi-check-circle"></i></div>
+                <div class="stat-card-accent"></div>
+            </div>
+            <div class="stat-card-body">
+                <strong class="stat-card-value">{{ summary.resolved_reports }}</strong>
+                <span class="stat-card-label">Resolved</span>
+                <p class="stat-card-caption">Issues already resolved or closed.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: FILTER / SEARCH BAR -->
+    <div class="filter-toolbar mb-4">
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <div class="search-input-group">
+                    <i class="bi bi-search"></i>
+                    <input id="dashboard-search" class="form-control" type="search" placeholder="Search by title, issue, or location">
+                </div>
+            </div>
+            <div class="col-lg-2">
+                <select id="dashboard-category" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for value, label in category_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <select id="dashboard-risk" class="form-select">
+                    <option value="">All Risks</option>
+                    {% for value, label in risk_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <select id="dashboard-status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <button id="dashboard-clear" class="btn btn-outline-secondary w-100" type="button">Clear Filters</button>
+            </div>
+        </div>
+        <div class="filter-chips mt-3 d-flex gap-2 flex-wrap">
+            <span class="filter-chip active" data-filter="all">All</span>
+            <span class="filter-chip" data-filter="critical">Critical</span>
+            <span class="filter-chip" data-filter="high">High Risk</span>
+            <span class="filter-chip" data-filter="verified">Verified</span>
+            <span class="filter-chip" data-filter="nearby">Nearby</span>
+            <span class="filter-chip" data-filter="resolved">Resolved</span>
+        </div>
+    </div>
+
+    <!-- SECTION 3 & 4 & 5: MAIN CONTENT GRID -->
+    <div class="dashboard-main-grid row g-4 mb-5">
+        <div class="col-lg-8">
+            <div class="map-panel">
+                <div class="panel-header d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h2 class="panel-title">Risk Map Overview</h2>
+                        <p class="panel-subtitle">Live markers showing nearby community safety reports.</p>
+                    </div>
+                    <div class="map-actions d-flex gap-2">
+                        <button id="toggle-markers-btn" class="btn btn-xs btn-teal-soft active">Markers</button>
+                        <button id="toggle-heatmap-btn" class="btn btn-xs btn-outline-teal">Heatmap</button>
+                    </div>
+                </div>
+                <div id="dashboard-map" class="dashboard-map-v2"></div>
+                <div class="map-legend mt-3 d-flex gap-3">
+                    <div class="legend-item"><span class="dot red"></span> Critical</div>
+                    <div class="legend-item"><span class="dot orange"></span> High</div>
+                    <div class="legend-item"><span class="dot yellow"></span> Medium</div>
+                    <div class="legend-item"><span class="dot green"></span> Resolved</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="reports-panel">
+                <div class="panel-header d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="panel-title">Active Safety Reports</h2>
+                    <span class="badge count-badge" id="visible-count">0</span>
+                </div>
+                <div id="dashboard-report-list" class="report-feed"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 6: INSIGHTS SECTION -->
+    <div class="insights-grid mb-5">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="insight-card">
+                    <h3 class="insight-title">Safety Insights</h3>
+                    <div class="insight-items">
+                        <div class="insight-item">
+                            <span>Most reported issue</span>
+                            <strong>Poor visibility</strong>
+                        </div>
+                        <div class="insight-item">
+                            <span>Highest risk area</span>
+                            <strong>Campus Back Gate</strong>
+                        </div>
+                        <div class="insight-item">
+                            <span>Safest time to walk</span>
+                            <strong>Afternoon</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="insight-card weather-snapshot-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="insight-title mb-0">Weather Safety Snapshot</h3>
+                        <button id="update-weather-btn" class="btn btn-sm btn-outline-secondary" title="Use my current location">
+                            <i class="bi bi-geo-fill"></i>
+                        </button>
+                    </div>
+                    <div id="weather-content">
+                        {% if weather %}
+                        <div class="d-flex align-items-center gap-3 mt-3">
+                            <div class="weather-icon">
+                                <img src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="{{ weather.description }}" width="50">
+                            </div>
+                            <div>
+                                <strong class="d-block fs-5">{{ weather.description }} ({{ weather.temp }}°C)</strong>
+                                <span class="text-muted">Walking Risk: 
+                                    <span class="fw-bold {% if weather.risk_level == 'Low' %}text-success{% elif weather.risk_level == 'Medium' %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ weather.risk_level }}
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                        <p class="mt-3 mb-0 small text-muted">Advice: {{ weather.advice }}</p>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-cloud-slash fs-2 text-muted"></i>
+                            <p class="small text-muted mt-2">Weather data temporarily unavailable.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                document.getElementById('update-weather-btn').addEventListener('click', function() {
+                    const btn = this;
+                    const originalIcon = btn.innerHTML;
+                    
+                    if (!navigator.geolocation) {
+                        alert("Geolocation is not supported by your browser.");
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+                            // Reload the page with the new coordinates in the query string
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('lat', lat);
+                            url.searchParams.set('lng', lng);
+                            window.location.href = url.toString();
+                        },
+                        function(error) {
+                            btn.disabled = false;
+                            btn.innerHTML = originalIcon;
+                            alert("Could not get your location. Please check your browser permissions.");
+                        },
+                        { enableHighAccuracy: true, timeout: 5000 }
+                    );
+                });
+            </script>
+            <div class="col-lg-4">
+                <div class="insight-card community-activity-card">
+                    <h3 class="insight-title">Community Activity</h3>
+                    <ul class="activity-list mt-3">
+                        <li><i class="bi bi-people"></i> 2 users confirmed a report</li>
+                        <li><i class="bi bi-check-circle"></i> 1 report marked resolved</li>
+                        <li><i class="bi bi-exclamation-circle text-danger"></i> 1 new critical issue submitted</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div class="quick-actions-card section-panel text-center p-4">
+        <h3 class="mb-3">Quick Actions</h3>
+        <div class="d-flex justify-content-center flex-wrap gap-2">
+            <a href="{% url 'report_create' %}" class="btn btn-teal-soft">Submit Safety Report</a>
+            <a href="{% url 'my_routes' %}" class="btn btn-teal-soft">Save Walking Route</a>
+            <a href="{% url 'my_routes' %}" class="btn btn-teal-soft">Add Route Note</a>
+            <a href="{% url 'report_list' %}" class="btn btn-teal-soft">Review My Reports</a>
+        </div>
+    </div>
+</div>
+
+<script id="reports-data" type="application/json">{{ reports_json|safe }}</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    window.SafeWalkDashboard.init({
+        dataElement: "reports-data",
+        mapId: "dashboard-map",
+        listId: "dashboard-report-list",
+        countId: "visible-count",
+        searchId: "dashboard-search",
+        categoryId: "dashboard-category",
+        riskId: "dashboard-risk",
+        statusId: "dashboard-status",
+        clearId: "dashboard-clear"
+    });
+});
+</script>
+{% endblock %}

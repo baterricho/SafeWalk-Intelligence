@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}My Routes | SafeWalk{% endblock %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="section-panel">
+            <h1 class="h3">Save Frequent Walking Route</h1>
+            <p class="text-muted">Pin your start and end points so SafeWalk can check nearby safety reports along your usual route.</p>
+            <form method="post" class="saved-route-form" novalidate>
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="client-errors alert alert-danger d-none"></div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.route_name.id_for_label }}">Route name</label>
+                    {{ form.route_name }}
+                    {% for error in form.route_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="map-pin-card mb-3">
+                    <h2 class="h5 mb-1">Pin your walking route on the map</h2>
+                    <p class="small text-muted">
+                        Click "Pin Start Point," then click your starting location on the map. Click "Pin End Point,"
+                        then click your destination. SafeWalk will automatically fill the place names.
+                    </p>
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                        <button class="btn btn-safewalk btn-sm active" type="button" id="pinStartPoint">Pin Start Point</button>
+                        <button class="btn btn-outline-primary btn-sm" type="button" id="pinEndPoint">Pin End Point</button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="useCurrentAsStart">Use my current location as start</button>
+                    </div>
+                    <div id="savedRouteMap" class="route-form-map"></div>
+                    <p id="savedRoutePinStatus" class="pin-status mt-3 mb-0">No route pinned yet.</p>
+                    <p class="small text-muted mb-0">Map and place names use OpenStreetMap contributors.</p>
+                    {{ form.start_latitude }}
+                    {{ form.start_longitude }}
+                    {{ form.end_latitude }}
+                    {{ form.end_longitude }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.start_location.id_for_label }}">{{ form.start_location.label }}</label>
+                    {{ form.start_location }}
+                    {% for error in form.start_location.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.end_location.id_for_label }}">{{ form.end_location.label }}</label>
+                    {{ form.end_location }}
+                    {% for error in form.end_location.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.usual_time.id_for_label }}">{{ form.usual_time.label }}</label>
+                    {{ form.usual_time }}
+                    {% for error in form.usual_time.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.notes.id_for_label }}">Notes</label>
+                    {{ form.notes }}
+                    {% for error in form.notes.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <button class="btn btn-safewalk">Save Route</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="section-panel">
+            <h2>My Safe Routes</h2>
+            {% for route in routes %}
+                <div class="route-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ route.route_name }}</strong>
+                        <span class="small text-muted">{{ route.usual_time }}</span>
+                    </div>
+                    <p class="mb-1">{{ route.start_location }} &rarr; {{ route.end_location }}</p>
+                    <small class="text-muted">
+                        {% if route.start_latitude and route.end_latitude %}
+                            Start and end pins saved.
+                        {% else %}
+                            Route pins not set yet.
+                        {% endif %}
+                    </small>
+                    {% if route.notes %}<p class="small text-muted mb-0 mt-1">{{ route.notes }}</p>{% endif %}
+                    <a class="small" href="/api/saved-routes/{{ route.id }}/nearby-reports/">Nearby report API</a>
+                </div>
+            {% empty %}
+                <p class="text-muted">No saved routes yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    window.SafeWalkFormMaps.initSavedRouteMap({
+        mapId: "savedRouteMap",
+        statusId: "savedRoutePinStatus",
+        pinStartId: "pinStartPoint",
+        pinEndId: "pinEndPoint",
+        currentStartId: "useCurrentAsStart"
+    });
+});
+</script>
+{% endblock %}

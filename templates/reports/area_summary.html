@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Area Summary | SafeWalk{% endblock %}
+{% block content %}
+<div class="section-panel">
+    <h1 class="page-title">{{ location_name }}</h1>
+    <div class="row g-3">
+        <div class="col-md-3"><div class="metric-card"><span>Total Reports</span><strong>{{ total_reports }}</strong></div></div>
+        <div class="col-md-3"><div class="metric-card"><span>Average Score</span><strong>{{ average_safety_score|default:"No data" }}</strong></div></div>
+        <div class="col-md-3"><div class="metric-card"><span>Highest Risk</span><strong>{{ highest_risk_level|default:"No data" }}</strong></div></div>
+        <div class="col-md-3"><div class="metric-card danger"><span>Critical Active</span><strong>{{ active_critical_reports }}</strong></div></div>
+    </div>
+    <h2 class="mt-4">Time-Based Timeline</h2>
+    <div class="timeline-grid">
+        {% for item in timeline %}
+            <div class="timeline-pill">
+                <strong>{{ item.time_period }}</strong>
+                <span>{{ item.risk_label }}</span>
+                <small>{{ item.total_reports }} reports</small>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

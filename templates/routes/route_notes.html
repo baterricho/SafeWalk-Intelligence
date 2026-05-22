@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Route Notes | SafeWalk{% endblock %}
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="section-panel">
+            <h1 class="h3">Add SafeRoute Note</h1>
+            <p class="text-muted">Click the map to pin the place where this safety tip applies.</p>
+            <form method="post" class="map-pin-form" novalidate>
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="client-errors alert alert-danger d-none"></div>
+                <div class="map-pin-card mb-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">Pin the safety tip location on the map</h2>
+                            <p class="small text-muted mb-0">Choose the exact place where this advice helps walkers.</p>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" type="button" id="useCurrentRouteNoteLocation">Use my current location</button>
+                    </div>
+                    <div id="routeNoteMap" class="form-map"></div>
+                    <p id="routeNotePinStatus" class="pin-status mt-3 mb-0">No location pinned yet.</p>
+                    <p class="small text-muted mb-0">Map and place names use OpenStreetMap contributors.</p>
+                    {{ form.latitude }}
+                    {{ form.longitude }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.location_name.id_for_label }}">{{ form.location_name.label }}</label>
+                    {{ form.location_name }}
+                    {% for error in form.location_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.safety_tip_type.id_for_label }}">Safety tip type</label>
+                    {{ form.safety_tip_type }}
+                    {% for error in form.safety_tip_type.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.note.id_for_label }}">Tip</label>
+                    {{ form.note }}
+                    {% for error in form.note.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <button class="btn btn-safewalk">Add Note</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="section-panel">
+            <h2>My Route Notes</h2>
+            {% for note in notes %}
+                <div class="route-item">
+                    <div class="d-flex justify-content-between gap-2">
+                        <strong>{{ note.location_name }}</strong>
+                        <span class="badge text-bg-light">{{ note.get_safety_tip_type_display }}</span>
+                    </div>
+                    <p class="mb-1">{{ note.note }}</p>
+                    <small class="text-muted">Pinned location saved automatically.</small>
+                </div>
+            {% empty %}
+                <p class="text-muted">No route notes yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    window.SafeWalkFormMaps.initSinglePinMap({
+        mapId: "routeNoteMap",
+        latitudeName: "latitude",
+        longitudeName: "longitude",
+        locationInputId: "id_location_name",
+        statusId: "routeNotePinStatus",
+        currentButtonId: "useCurrentRouteNoteLocation",
+        pinnedText: "Safety tip location pinned successfully.",
+        missingText: "Please pin the safety tip location on the map before submitting."
+    });
+});
+</script>
+{% endblock %}
