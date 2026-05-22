@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Delete Saved Route | SafeWalk{% endblock %}
+{% block content %}
+<div class="section-panel">
+    <h1 class="h3">Delete Saved Route</h1>
+    <p>Are you sure you want to delete <strong>{{ route.route_name }}</strong>?</p>
+    <p class="text-muted">{{ route.start_location }} &rarr; {{ route.end_location }}</p>
+    <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+        <a class="btn btn-outline-secondary" href="{% url 'saved_route_detail' route.pk %}">Cancel</a>
+    </form>
+</div>
+{% endblock %}

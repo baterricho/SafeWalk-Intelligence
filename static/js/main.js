@@ -211,6 +211,9 @@
                             </div>
                             <a class="btn btn-sm btn-outline-teal" href="${report.detail_url}">View Details</a>
                         </div>
+                        <div class="community-line small mt-3">
+                            ${report.confirmation_count || 0} confirmations - ${report.comment_count || 0} comments
+                        </div>
                     `;
                     list.appendChild(item);
                 });
@@ -341,6 +344,31 @@
                 .bindPopup(`<strong>${escapeHtml(title)}</strong><br>Risk: ${escapeHtml(risk)}<br>Status: ${escapeHtml(status)}`)
                 .openPopup();
             setTimeout(function () { map.invalidateSize(); }, 100);
+        }
+    };
+
+    window.SafeWalkRouteMap = {
+        init: function (elementId) {
+            const node = document.getElementById(elementId);
+            if (!node || !window.L) return;
+            const start = [parseFloat(node.dataset.startLat), parseFloat(node.dataset.startLng)];
+            const end = [parseFloat(node.dataset.endLat), parseFloat(node.dataset.endLng)];
+            if (start.some(Number.isNaN) || end.some(Number.isNaN)) return;
+
+            const map = L.map(elementId).setView(start, 15);
+            addBaseLayers(map);
+            const startLabel = node.dataset.startLabel || "Start point";
+            const endLabel = node.dataset.endLabel || "End point";
+            const startMarker = L.marker(start, { icon: markerIcon("low") })
+                .addTo(map)
+                .bindPopup(`<strong>Start</strong><br>${escapeHtml(startLabel)}`);
+            const endMarker = L.marker(end, { icon: markerIcon("critical") })
+                .addTo(map)
+                .bindPopup(`<strong>End</strong><br>${escapeHtml(endLabel)}`);
+            const routeLine = L.polyline([start, end], { color: "#0f766e", weight: 4, opacity: 0.9 }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [35, 35], maxZoom: 17 });
+            startMarker.openPopup();
+            setTimeout(function () { map.invalidateSize(); }, 150);
         }
     };
 

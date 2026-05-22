@@ -2,11 +2,14 @@
 {% block title %}Delete Report | SafeWalk{% endblock %}
 {% block content %}
 <div class="section-panel">
-    <h1 class="h3">Delete Safety Report</h1>
+    <h1 class="h3">{% if user == report.user %}Delete Safety Report{% else %}Remove Report{% endif %}</h1>
     <p>Are you sure you want to delete <strong>{{ report.title }}</strong>?</p>
+    {% if user != report.user %}
+        <p class="text-muted">Use this only for moderation when a report is fake, harmful, spam, or inappropriate.</p>
+    {% endif %}
     <form method="post" class="d-flex gap-2">
         {% csrf_token %}
-        <button class="btn btn-danger" type="submit">Delete</button>
+        <button class="btn btn-danger" type="submit">{% if user == report.user %}Delete{% else %}Remove Report{% endif %}</button>
         <a class="btn btn-outline-secondary" href="{% url 'report_detail' report.pk %}">Cancel</a>
     </form>
 </div>

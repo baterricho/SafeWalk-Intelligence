@@ -12,7 +12,9 @@ class IsOwnerOrAdminOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        return user_is_admin(request.user) or obj.user == request.user
+        if request.method == "DELETE":
+            return user_is_admin(request.user) or obj.user == request.user
+        return obj.user == request.user
 
 
 class IsConfirmationOwnerOrAdmin(BasePermission):

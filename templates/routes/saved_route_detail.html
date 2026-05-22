@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Saved Route Details | SafeWalk{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <p class="eyebrow text-dark">Saved walking route</p>
+        <h1 class="page-title">Saved Route Details</h1>
+        <p class="text-muted mb-0">Review your saved path, map pins, and nearby safety reports.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'my_routes' %}">Back to My Routes</a>
+        <a class="btn btn-outline-danger" href="{% url 'saved_route_delete' route.pk %}">Delete</a>
+    </div>
+</div>
+
+<div class="route-detail-grid row g-4">
+    <div class="col-lg-5">
+        <section class="section-panel route-detail-card mb-4">
+            <h2 class="h3 mb-2">{{ route.route_name }}</h2>
+            <p class="route-path fs-5 mb-3">{{ route.start_location }} &rarr; {{ route.end_location }}</p>
+            <div class="route-detail-meta">
+                <div>
+                    <span>Start point</span>
+                    <strong>{{ route.start_location }}</strong>
+                </div>
+                <div>
+                    <span>End point</span>
+                    <strong>{{ route.end_location }}</strong>
+                </div>
+                <div>
+                    <span>Usual walking time</span>
+                    <strong>{{ route.usual_time|time:"g:i A" }}</strong>
+                </div>
+                <div>
+                    <span>Date created</span>
+                    <strong>{{ route.created_at|date:"M d, Y" }}</strong>
+                </div>
+            </div>
+            {% if route.notes %}
+                <div class="route-notes-box mt-3">
+                    <span>Notes</span>
+                    <p class="mb-0">{{ route.notes }}</p>
+                </div>
+            {% endif %}
+        </section>
+
+        {% if weather %}
+            <section class="section-panel weather-route-card">
+                <h2 class="h4">Weather Safety</h2>
+                <p class="mb-1"><strong>{{ weather.description }}</strong> ({{ weather.temp }}&deg;C)</p>
+                <p class="mb-1">Walking Risk: <strong>{{ weather.risk_level }}</strong></p>
+                <p class="small text-muted mb-0">{{ weather.advice }}</p>
+            </section>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-7">
+        <section class="map-card mb-4">
+            <h2 class="h4 mb-1">Route Map</h2>
+            <p class="small text-muted">This map shows your saved start and end points.</p>
+            <div
+                id="saved-route-detail-map"
+                class="saved-route-detail-map"
+                data-start-lat="{{ route.start_latitude }}"
+                data-start-lng="{{ route.start_longitude }}"
+                data-end-lat="{{ route.end_latitude }}"
+                data-end-lng="{{ route.end_longitude }}"
+                data-start-label="{{ route.start_location }}"
+                data-end-label="{{ route.end_location }}"
+            ></div>
+        </section>
+    </div>
+</div>
+
+<section class="section-panel mt-4">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+        <div>
+            <h2 class="h4 mb-1">Nearby Safety Reports</h2>
+            <p class="text-muted mb-0">Reports near the start point, end point, or route line.</p>
+        </div>
+        <span class="badge count-badge">{{ nearby_reports|length }}</span>
+    </div>
+
+    <div class="row g-3">
+        {% for report in nearby_reports %}
+            <div class="col-md-6 col-xl-4">
+                <article class="report-card h-100 route-nearby-report">
+                    <div class="d-flex gap-2 flex-wrap mb-2">
+                        <span class="badge risk-{{ report.risk_level }}">{{ report.get_risk_level_display }}</span>
+                        <span class="badge status-{{ report.status }}">{{ report.get_status_display }}</span>
+                    </div>
+                    <h3 class="h5 mb-1">{{ report.title }}</h3>
+                    <p class="location-line mb-2">{{ report.location_name }}</p>
+                    <p class="line-clamp small text-muted">{{ report.description }}</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <span class="score-chip">{{ report.safety_score }} / 100</span>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'report_detail' report.pk %}">View Details</a>
+                    </div>
+                </article>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="empty-state">No nearby safety reports found for this route.</div>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    window.SafeWalkRouteMap.init("saved-route-detail-map");
+});
+</script>
+{% endblock %}

@@ -89,7 +89,7 @@ class Command(BaseCommand):
                 "latitude": 9.740920,
                 "longitude": 118.733870,
                 "risk_level": SafetyReport.RiskLevel.HIGH,
-                "status": SafetyReport.Status.NEEDS_REVIEW,
+                "status": SafetyReport.Status.PENDING,
                 "time_observed": time(5, 40),
                 "lighting_condition": SafetyReport.LightingCondition.DIM,
                 "crowd_level": SafetyReport.CrowdLevel.EMPTY,
@@ -184,7 +184,7 @@ class Command(BaseCommand):
                 defaults={
                     "confirmation_type": ReportConfirmation.ConfirmationType.CONFIRMED
                     if index % 3 != 0
-                    else ReportConfirmation.ConfirmationType.NEEDS_REVIEW,
+                    else ReportConfirmation.ConfirmationType.DISPUTED,
                     "comment": "Sample community feedback for seed data.",
                 },
             )

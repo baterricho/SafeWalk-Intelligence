@@ -66,22 +66,30 @@
         <div class="section-panel">
             <h2>My Safe Routes</h2>
             {% for route in routes %}
-                <div class="route-item">
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ route.route_name }}</strong>
-                        <span class="small text-muted">{{ route.usual_time }}</span>
+                <article class="route-card">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <h3 class="h5 mb-1">{{ route.route_name }}</h3>
+                            <p class="route-path mb-2">{{ route.start_location }} &rarr; {{ route.end_location }}</p>
+                        </div>
+                        <span class="route-time">{{ route.usual_time|time:"g:i A" }}</span>
                     </div>
-                    <p class="mb-1">{{ route.start_location }} &rarr; {{ route.end_location }}</p>
-                    <small class="text-muted">
-                        {% if route.start_latitude and route.end_latitude %}
-                            Start and end pins saved.
+                    <div class="small text-muted mb-2">
+                        Usual time: {{ route.usual_time|time:"g:i A" }}
+                    </div>
+                    <div class="route-pin-status mb-2">
+                        {% if route.start_latitude != None and route.start_longitude != None and route.end_latitude != None and route.end_longitude != None %}
+                            <i class="bi bi-geo-alt-fill"></i> Start and end pins saved.
                         {% else %}
-                            Route pins not set yet.
+                            <i class="bi bi-exclamation-circle"></i> Route pins not set yet.
                         {% endif %}
-                    </small>
-                    {% if route.notes %}<p class="small text-muted mb-0 mt-1">{{ route.notes }}</p>{% endif %}
-                    <a class="small" href="/api/saved-routes/{{ route.id }}/nearby-reports/">Nearby report API</a>
-                </div>
+                    </div>
+                    {% if route.notes %}<p class="small text-muted mb-3">{{ route.notes|truncatechars:120 }}</p>{% endif %}
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a class="btn btn-sm btn-safewalk" href="{% url 'saved_route_detail' route.pk %}">View Route</a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'saved_route_delete' route.pk %}">Delete</a>
+                    </div>
+                </article>
             {% empty %}
                 <p class="text-muted">No saved routes yet.</p>
             {% endfor %}

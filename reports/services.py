@@ -54,10 +54,7 @@ def calculate_report_decay(report):
     recent_cutoff = timezone.now() - timedelta(days=14)
     recent_confirmations = report.confirmations.filter(
         created_at__gte=recent_cutoff,
-        confirmation_type__in=[
-            ReportConfirmation.ConfirmationType.CONFIRMED,
-            ReportConfirmation.ConfirmationType.NEEDS_REVIEW,
-        ],
+        confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED,
     ).count()
     decay += min(0.25, recent_confirmations * 0.05)
 
@@ -106,10 +103,9 @@ def calculate_safety_score(report):
     confirmations = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED).count()
     disputes = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.DISPUTED).count()
     resolved_votes = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.RESOLVED).count()
-    needs_review = report.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.NEEDS_REVIEW).count()
 
     related_reports = SafetyReport.objects.filter(
-        status__in=[SafetyReport.Status.PENDING, SafetyReport.Status.VERIFIED, SafetyReport.Status.IN_PROGRESS, SafetyReport.Status.NEEDS_REVIEW],
+        status__in=[SafetyReport.Status.PENDING, SafetyReport.Status.VERIFIED, SafetyReport.Status.IN_PROGRESS],
         category=report.category,
     ).exclude(pk=report.pk)
     nearby_count = 0
@@ -122,14 +118,11 @@ def calculate_safety_score(report):
     penalty = RISK_WEIGHTS.get(report.risk_level, 30)
     penalty += min(15, nearby_count * 4)
     penalty += min(20, confirmations * 5)
-    penalty += min(10, needs_review * 3)
     penalty -= min(18, disputes * 6)
     penalty -= min(18, resolved_votes * 6)
 
     if report.status == SafetyReport.Status.VERIFIED:
         penalty += 12
-    elif report.status == SafetyReport.Status.NEEDS_REVIEW:
-        penalty += 6
     elif report.status == SafetyReport.Status.IN_PROGRESS:
         penalty -= 8
     elif report.status == SafetyReport.Status.RESOLVED:
@@ -192,7 +185,7 @@ def detect_duplicate_report(report_data):
 
     candidates = SafetyReport.objects.filter(
         category=category,
-        status__in=[SafetyReport.Status.PENDING, SafetyReport.Status.VERIFIED, SafetyReport.Status.IN_PROGRESS, SafetyReport.Status.NEEDS_REVIEW],
+        status__in=[SafetyReport.Status.PENDING, SafetyReport.Status.VERIFIED, SafetyReport.Status.IN_PROGRESS],
     ).select_related("user")[:250]
 
     duplicates = []
@@ -260,16 +253,13 @@ def suggest_admin_status(report):
     confirmed = counter.get(ReportConfirmation.ConfirmationType.CONFIRMED, 0)
     disputed = counter.get(ReportConfirmation.ConfirmationType.DISPUTED, 0)
     resolved = counter.get(ReportConfirmation.ConfirmationType.RESOLVED, 0)
-    needs_review = counter.get(ReportConfirmation.ConfirmationType.NEEDS_REVIEW, 0)
 
     if resolved >= 3:
         return SafetyReport.Status.RESOLVED
-    if disputed >= 3 or needs_review >= 2:
-        return SafetyReport.Status.NEEDS_REVIEW
+    if disputed >= 3:
+        return SafetyReport.Status.REJECTED
     if confirmed >= 3 and report.evidence_score >= 55:
         return SafetyReport.Status.VERIFIED
-    if report.safety_score <= 30 and report.status == SafetyReport.Status.PENDING:
-        return SafetyReport.Status.NEEDS_REVIEW
     return report.status
 
 

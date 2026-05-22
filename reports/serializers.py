@@ -13,7 +13,6 @@ class SafetyReportSerializer(serializers.ModelSerializer):
     confirmations_count = serializers.SerializerMethodField()
     disputes_count = serializers.SerializerMethodField()
     resolved_confirmations_count = serializers.SerializerMethodField()
-    needs_review_count = serializers.SerializerMethodField()
     confirmation_count = serializers.SerializerMethodField()
     dispute_count = serializers.SerializerMethodField()
     resolved_count = serializers.SerializerMethodField()
@@ -53,7 +52,6 @@ class SafetyReportSerializer(serializers.ModelSerializer):
             "confirmation_count",
             "dispute_count",
             "resolved_count",
-            "needs_review_count",
             "comment_count",
             "decay_factor",
             "suggested_status",
@@ -101,9 +99,6 @@ class SafetyReportSerializer(serializers.ModelSerializer):
 
     def get_resolved_count(self, obj):
         return self.get_resolved_confirmations_count(obj)
-
-    def get_needs_review_count(self, obj):
-        return obj.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.NEEDS_REVIEW).count()
 
     def get_comment_count(self, obj):
         return obj.confirmations.exclude(comment__exact="").count()

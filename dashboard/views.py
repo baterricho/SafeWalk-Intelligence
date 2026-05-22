@@ -37,6 +37,8 @@ def serialize_report_for_dashboard(report):
         "safety_score": report.safety_score,
         "score_label": report.score_label,
         "credibility_label": report.get_credibility_label_display(),
+        "comment_count": report.comment_count,
+        "confirmation_count": report.confirmation_count,
         "detail_url": f"/reports/{report.id}/",
         "created_at": report.created_at.isoformat(),
         "updated_at": report.updated_at.isoformat(),

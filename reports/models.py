@@ -37,7 +37,6 @@ class SafetyReport(models.Model):
         IN_PROGRESS = "in_progress", "In Progress"
         RESOLVED = "resolved", "Resolved"
         REJECTED = "rejected", "Rejected"
-        NEEDS_REVIEW = "needs_admin_review", "Needs Admin Review"
 
     class LightingCondition(models.TextChoices):
         BRIGHT = "bright", "Bright"
@@ -160,20 +159,16 @@ class SafetyReport(models.Model):
         return self.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.RESOLVED).count()
 
     @property
-    def needs_review_count(self):
-        return self.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.NEEDS_REVIEW).count()
-
-    @property
     def comment_count(self):
         return self.confirmations.exclude(comment__exact="").count()
 
 
 class ReportConfirmation(models.Model):
     class ConfirmationType(models.TextChoices):
+        COMMENT = "comment", "Comment"
         CONFIRMED = "confirmed", "Confirmed"
         DISPUTED = "disputed", "Disputed"
         RESOLVED = "resolved_by_community", "Resolved by Community"
-        NEEDS_REVIEW = "needs_review", "Needs Review"
 
     report = models.ForeignKey(SafetyReport, on_delete=models.CASCADE, related_name="confirmations")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="report_confirmations")
@@ -193,10 +188,10 @@ class ReportConfirmation(models.Model):
     @property
     def feedback_label(self):
         labels = {
+            self.ConfirmationType.COMMENT: "Community update",
             self.ConfirmationType.CONFIRMED: "I also saw this",
             self.ConfirmationType.RESOLVED: "Marked as resolved",
             self.ConfirmationType.DISPUTED: "Reported as inaccurate",
-            self.ConfirmationType.NEEDS_REVIEW: "Needs admin review",
         }
         return labels.get(self.confirmation_type, self.get_confirmation_type_display())
 

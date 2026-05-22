@@ -190,7 +190,6 @@ def report_feedback_counts(report):
         "confirmation_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED).count(),
         "dispute_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.DISPUTED).count(),
         "resolved_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.RESOLVED).count(),
-        "needs_review_count": confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.NEEDS_REVIEW).count(),
         "comment_count": confirmations.exclude(comment__exact="").count(),
     }
 
@@ -198,10 +197,12 @@ def report_feedback_counts(report):
 def report_detail_page(request, pk):
     report = get_object_or_404(visible_reports_for_user(request.user), pk=pk)
     if request.method == "POST" and request.user.is_authenticated:
-        confirmation_type = request.POST.get("confirmation_type")
-        comment = request.POST.get("comment", "")
+        confirmation_type = request.POST.get("confirmation_type") or ReportConfirmation.ConfirmationType.COMMENT
+        comment = request.POST.get("comment", "").strip()
         valid_types = dict(ReportConfirmation.ConfirmationType.choices)
-        if confirmation_type in valid_types:
+        if confirmation_type in valid_types and (
+            confirmation_type != ReportConfirmation.ConfirmationType.COMMENT or comment
+        ):
             ReportConfirmation.objects.update_or_create(
                 report=report,
                 user=request.user,
@@ -211,6 +212,7 @@ def report_detail_page(request, pk):
             messages.success(request, "Your community feedback was recorded.")
         return redirect("report_detail", pk=report.pk)
     confirmations = report.confirmations.select_related("user").order_by("-created_at")
+    comments = confirmations.exclude(comment__exact="")
     return render(
         request,
         "reports/report_detail.html",
@@ -218,9 +220,9 @@ def report_detail_page(request, pk):
             "report": report,
             "reporter_display": report.user.username if user_is_admin(request.user) and report.user else report.public_reporter_name,
             "confirmations": confirmations,
+            "comments": comments,
             "feedback_counts": report_feedback_counts(report),
             "timeline": generate_location_timeline(report.location_name),
-            "history": report.status_history.select_related("admin"),
             "is_admin_viewer": user_is_admin(request.user),
         },
     )
@@ -249,6 +251,9 @@ def report_update_page(request, pk):
     report = get_object_or_404(SafetyReport, pk=pk)
     if report.user != request.user and not user_is_admin(request.user):
         messages.error(request, "You can only edit your own reports.")
+        return redirect("report_detail", pk=pk)
+    if report.user != request.user:
+        messages.error(request, "Admins can moderate report status, but cannot edit user report content.")
         return redirect("report_detail", pk=pk)
     form = SafetyReportForm(request.POST or None, request.FILES or None, instance=report)
     if request.method == "POST" and form.is_valid():

@@ -20,8 +20,38 @@ class SafetyReportAdmin(admin.ModelAdmin):
     ]
     list_filter = ["category", "risk_level", "status", "lighting_condition", "crowd_level", "created_at"]
     search_fields = ["title", "description", "location_name", "user__username"]
-    readonly_fields = ["safety_score", "evidence_score", "credibility_label", "photo_preview", "created_at", "updated_at"]
+    base_readonly_fields = [
+        "safety_score",
+        "evidence_score",
+        "credibility_label",
+        "photo_preview",
+        "created_at",
+        "updated_at",
+    ]
+    moderated_readonly_fields = [
+        "user",
+        "title",
+        "category",
+        "description",
+        "location_name",
+        "latitude",
+        "longitude",
+        "risk_level",
+        "time_observed",
+        "day_type",
+        "lighting_condition",
+        "crowd_level",
+        "is_anonymous",
+        "visibility_level",
+        "photo",
+        *base_readonly_fields,
+    ]
     actions = ["mark_verified", "mark_rejected", "mark_resolved"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.moderated_readonly_fields
+        return self.base_readonly_fields
 
     def photo_preview(self, obj):
         if obj.photo:
