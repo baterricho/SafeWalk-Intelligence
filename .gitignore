@@ -9,3 +9,5 @@ static/data/
 *.log
 node_modules/
 .vercel
+.env.local
+.env.*.local
