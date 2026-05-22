@@ -31,7 +31,7 @@ The project includes CRUD reports, JWT API authentication, Django template pages
 - Backend: Django
 - API: Django REST Framework
 - Auth: Django authentication and JWT via Simple JWT
-- Database: SQLite for local development
+- Database: SQLite for local development, PostgreSQL in production via `DATABASE_URL`
 - Frontend: Django Templates, Bootstrap 5, custom CSS, Leaflet
 - Filtering: django-filter
 - Settings: python-decouple
@@ -267,6 +267,31 @@ The geocoding service:
 - handles unavailable location names gracefully
 
 No paid geocoding API key is required.
+
+## Vercel Deployment
+
+This project can run on Vercel through `@vercel/python`, but production should not rely on the local `db.sqlite3` file. That file is ignored by Git and Vercel functions do not provide persistent SQLite storage for user data.
+
+Set these Vercel environment variables before redeploying:
+
+```text
+SECRET_KEY=<long-random-secret>
+DEBUG=False
+ALLOWED_HOSTS=safe-walk-intelligence.vercel.app,.vercel.app
+CORS_ALLOWED_ORIGINS=https://safe-walk-intelligence.vercel.app
+CSRF_TRUSTED_ORIGINS=https://safe-walk-intelligence.vercel.app
+DATABASE_URL=<postgres connection string>
+OPENWEATHER_API_KEY=<optional>
+GOOGLE_CLIENT_ID=<optional>
+GOOGLE_CLIENT_SECRET=<optional>
+```
+
+After adding `DATABASE_URL`, run the migrations against the production database:
+
+```bash
+python manage.py migrate
+python manage.py seed_data
+```
 
 ## Screenshots
 
