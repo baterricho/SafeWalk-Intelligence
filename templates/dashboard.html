@@ -266,7 +266,9 @@ document.addEventListener("DOMContentLoaded", function () {
         categoryId: "dashboard-category",
         riskId: "dashboard-risk",
         statusId: "dashboard-status",
-        clearId: "dashboard-clear"
+        clearId: "dashboard-clear",
+        liveUrl: "{% url 'dashboard_reports_api' %}",
+        pollInterval: 15000
     });
 });
 </script>

@@ -15,6 +15,7 @@ urlpatterns = [
     path("api/", include("routes.urls")),
     path("api/admin/", include("dashboard.urls")),
     path("api/geocoding/", include("geocoding.urls")),
+    path("api/dashboard/reports/", dashboard_views.dashboard_reports_api, name="dashboard_reports_api"),
     path("api/weather/", dashboard_views.weather_api, name="weather_api"),
     path("accounts/", include("allauth.urls")),
     path("", dashboard_views.home_page, name="home"),

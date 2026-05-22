@@ -21,6 +21,7 @@ if ".vercel.app" not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(".vercel.app")
 
 OPENWEATHER_API_KEY = config("OPENWEATHER_API_KEY", default=None)
+BLOB_READ_WRITE_TOKEN = config("BLOB_READ_WRITE_TOKEN", default="")
 
 
 INSTALLED_APPS = [
@@ -125,6 +126,10 @@ WHITENOISE_USE_FINDERS = True
 WHITENOISE_MANIFEST_STRICT = False # Prevents crashes if a file is missing
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+STORAGES = {
+    "default": {"BACKEND": "reports.storage.VercelBlobStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SITE_ID = 1

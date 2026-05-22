@@ -103,7 +103,7 @@ class SafetyReport(models.Model):
         choices=VisibilityLevel.choices,
         default=VisibilityLevel.PUBLIC,
     )
-    photo = models.ImageField(upload_to="report_photos/", blank=True, null=True)
+    photo = models.ImageField(upload_to="report_photos/", blank=True, null=True, max_length=500)
     safety_score = models.PositiveSmallIntegerField(
         default=70,
         validators=[MinValueValidator(0), MaxValueValidator(100)],

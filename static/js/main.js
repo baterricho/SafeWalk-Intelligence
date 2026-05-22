@@ -112,7 +112,8 @@
         init: function (config) {
             const dataNode = document.getElementById(config.dataElement);
             if (!dataNode || !window.L) return;
-            const reports = JSON.parse(dataNode.textContent || "[]");
+            let reports = JSON.parse(dataNode.textContent || "[]");
+            let reportsSignature = reportSignature(reports);
             const map = L.map(config.mapId).setView([9.7418, 118.7351], 15);
             addBaseLayers(map);
 
@@ -133,6 +134,25 @@
             const risk = document.getElementById(config.riskId);
             const status = document.getElementById(config.statusId);
             const clear = document.getElementById(config.clearId);
+
+            function normalizeReport(report) {
+                return Object.assign({}, report, {
+                    latitude: Number(report.latitude),
+                    longitude: Number(report.longitude)
+                });
+            }
+
+            function reportSignature(items) {
+                return (items || []).map(function (report) {
+                    return [
+                        report.id,
+                        report.status,
+                        report.safety_score,
+                        report.credibility_label,
+                        report.updated_at || ""
+                    ].join(":");
+                }).join("|");
+            }
 
             function filteredReports() {
                 const q = (search.value || "").toLowerCase().trim();
@@ -275,6 +295,32 @@
                 map.invalidateSize();
                 render();
             }, 100);
+
+            if (config.liveUrl) {
+                setInterval(function () {
+                    fetch(config.liveUrl, {
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: { "Accept": "application/json" }
+                    })
+                        .then(function (response) {
+                            if (!response.ok) throw new Error("Dashboard refresh failed.");
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            const nextReports = (data.reports || []).map(normalizeReport);
+                            const nextSignature = reportSignature(nextReports);
+                            if (nextSignature !== reportsSignature) {
+                                reports = nextReports;
+                                reportsSignature = nextSignature;
+                                render();
+                            }
+                        })
+                        .catch(function () {
+                            // Keep the current dashboard visible if a refresh request fails.
+                        });
+                }, config.pollInterval || 15000);
+            }
         }
     };
 

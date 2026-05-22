@@ -38,6 +38,8 @@ def serialize_report_for_dashboard(report):
         "score_label": report.score_label,
         "credibility_label": report.get_credibility_label_display(),
         "detail_url": f"/reports/{report.id}/",
+        "created_at": report.created_at.isoformat(),
+        "updated_at": report.updated_at.isoformat(),
     }
 
 
@@ -93,6 +95,19 @@ def user_dashboard_page(request):
         "weather": weather,
     }
     return render(request, "dashboard.html", context)
+
+
+@login_required
+def dashboard_reports_api(request):
+    reports = visible_reports_for_user(request.user).exclude(status=SafetyReport.Status.REJECTED)[:300]
+    user_reports = SafetyReport.objects.filter(user=request.user)
+    return JsonResponse(
+        {
+            "reports": [serialize_report_for_dashboard(report) for report in reports],
+            "summary": dashboard_summary(),
+            "user_report_count": user_reports.count(),
+        }
+    )
 
 
 def admin_required(user):
