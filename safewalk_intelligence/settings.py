@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY", default="dev-only-safe-walk-secret-key")
 DEBUG_RAW = str(config("DEBUG", default="True")).strip().lower()
 DEBUG = DEBUG_RAW not in {"0", "false", "no", "off", "production", "prod"}
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.vercel.app", cast=Csv())
 OPENWEATHER_API_KEY = config("OPENWEATHER_API_KEY", default=None)
 
 
@@ -90,6 +90,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
