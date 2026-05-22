@@ -5,6 +5,7 @@ django-filter>=24.1
 python-decouple>=3.8
 django-cors-headers>=4.3
 django-allauth>=65.14
+cryptography>=42.0
 dj-database-url>=2.2
 Pillow>=10.0
 psycopg[binary]>=3.1
