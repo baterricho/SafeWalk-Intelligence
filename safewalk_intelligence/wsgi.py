@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+from shutil import copyfile
 
 from django.core.wsgi import get_wsgi_application
 
@@ -18,11 +20,27 @@ def bootstrap_vercel_sqlite():
     if database.get("ENGINE") != "django.db.backends.sqlite3":
         return
 
+    database_path = Path(database["NAME"])
+    template_path = Path(getattr(settings, "VERCEL_SQLITE_TEMPLATE", ""))
+    if template_path.exists() and not database_path.exists():
+        database_path.parent.mkdir(parents=True, exist_ok=True)
+        copyfile(template_path, database_path)
+
     from django.core.management import call_command
     from django.db import DatabaseError, connection
 
+    def has_table(table_name):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = %s", [table_name])
+                return cursor.fetchone() is not None
+        except DatabaseError:
+            connection.close()
+            return False
+
     try:
-        call_command("migrate", interactive=False, verbosity=0)
+        if not has_table("django_migrations"):
+            call_command("migrate", interactive=False, verbosity=0)
         if getattr(settings, "VERCEL_SEED_DATA", False):
             from reports.models import SafetyReport
 

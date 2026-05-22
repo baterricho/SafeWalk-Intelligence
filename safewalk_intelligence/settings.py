@@ -101,6 +101,7 @@ else:
 
 VERCEL_AUTO_MIGRATE = config("VERCEL_AUTO_MIGRATE", default=IS_VERCEL and not DATABASE_URL, cast=bool)
 VERCEL_SEED_DATA = config("VERCEL_SEED_DATA", default=VERCEL_AUTO_MIGRATE, cast=bool)
+VERCEL_SQLITE_TEMPLATE = BASE_DIR / config("VERCEL_SQLITE_TEMPLATE", default="seed.sqlite3")
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

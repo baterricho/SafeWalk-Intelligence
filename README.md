@@ -272,7 +272,7 @@ No paid geocoding API key is required.
 
 This project can run on Vercel through `@vercel/python`, but production should not rely on the local `db.sqlite3` file. That file is ignored by Git and Vercel functions do not provide persistent SQLite storage for user data.
 
-If `DATABASE_URL` is not set on Vercel, the app creates an emergency SQLite database in Vercel's temporary filesystem and runs migrations at function startup. This prevents the public site from crashing, but the data is not persistent. Use a hosted PostgreSQL database for real deployment data.
+If `DATABASE_URL` is not set on Vercel, the app copies `seed.sqlite3` into Vercel's temporary filesystem and uses that as an emergency database. This prevents the public site from crashing, but the data is not persistent. Use a hosted PostgreSQL database for real deployment data.
 
 Set these Vercel environment variables before redeploying:
 
