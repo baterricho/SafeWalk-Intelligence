@@ -40,14 +40,14 @@ SAMPLE_HOURLY = [
 ]
 
 SAMPLE_FORECAST = [
-    {"weekday": "Fri", "main": "Thunderstorm", "condition": "Scattered thunderstorms", "icon": "bi-cloud-lightning-rain", "icon_url": "https://openweathermap.org/img/wn/11d@2x.png", "temp_max": 33, "temp_min": 28, "precipitation": 45},
-    {"weekday": "Sat", "main": "Thunderstorm", "condition": "Scattered thunderstorms", "icon": "bi-cloud-lightning-rain", "icon_url": "https://openweathermap.org/img/wn/11d@2x.png", "temp_max": 33, "temp_min": 27, "precipitation": 52},
-    {"weekday": "Sun", "main": "Thunderstorm", "condition": "Thunderstorms", "icon": "bi-cloud-lightning-rain", "icon_url": "https://openweathermap.org/img/wn/11d@2x.png", "temp_max": 32, "temp_min": 27, "precipitation": 58},
-    {"weekday": "Mon", "main": "Rain", "condition": "Rain", "icon": "bi-cloud-rain-heavy", "icon_url": "https://openweathermap.org/img/wn/10d@2x.png", "temp_max": 30, "temp_min": 27, "precipitation": 63},
-    {"weekday": "Tue", "main": "Rain", "condition": "Rain showers", "icon": "bi-cloud-rain", "icon_url": "https://openweathermap.org/img/wn/09d@2x.png", "temp_max": 32, "temp_min": 27, "precipitation": 49},
-    {"weekday": "Wed", "main": "Rain", "condition": "Cloudy with rain", "icon": "bi-cloud-drizzle", "icon_url": "https://openweathermap.org/img/wn/09d@2x.png", "temp_max": 32, "temp_min": 27, "precipitation": 44},
-    {"weekday": "Thu", "main": "Rain", "condition": "Cloudy with rain", "icon": "bi-cloud-drizzle", "icon_url": "https://openweathermap.org/img/wn/09d@2x.png", "temp_max": 33, "temp_min": 27, "precipitation": 42},
-    {"weekday": "Fri", "main": "Clouds", "condition": "Partly cloudy", "icon": "bi-cloud-sun", "icon_url": "https://openweathermap.org/img/wn/02d@2x.png", "temp_max": 32, "temp_min": 27, "precipitation": 28},
+    {"weekday": "Fri", "main": "Clear", "condition": "Sunny", "icon": "bi-brightness-high", "icon_url": "https://openweathermap.org/img/wn/01d@2x.png", "temp_max": 35, "temp_min": 27, "precipitation": 5},
+    {"weekday": "Sat", "main": "Clear", "condition": "Sunny", "icon": "bi-brightness-high", "icon_url": "https://openweathermap.org/img/wn/01d@2x.png", "temp_max": 36, "temp_min": 27, "precipitation": 2},
+    {"weekday": "Sun", "main": "Clouds", "condition": "Partly cloudy", "icon": "bi-cloud-sun", "icon_url": "https://openweathermap.org/img/wn/02d@2x.png", "temp_max": 34, "temp_min": 26, "precipitation": 15},
+    {"weekday": "Mon", "main": "Clouds", "condition": "Cloudy", "icon": "bi-cloud", "icon_url": "https://openweathermap.org/img/wn/03d@2x.png", "temp_max": 33, "temp_min": 26, "precipitation": 20},
+    {"weekday": "Tue", "main": "Rain", "condition": "Light rain", "icon": "bi-cloud-rain", "icon_url": "https://openweathermap.org/img/wn/10d@2x.png", "temp_max": 31, "temp_min": 25, "precipitation": 45},
+    {"weekday": "Wed", "main": "Rain", "condition": "Showers", "icon": "bi-cloud-drizzle", "icon_url": "https://openweathermap.org/img/wn/09d@2x.png", "temp_max": 30, "temp_min": 25, "precipitation": 55},
+    {"weekday": "Thu", "main": "Thunderstorm", "condition": "Thunderstorm", "icon": "bi-cloud-lightning-rain", "icon_url": "https://openweathermap.org/img/wn/11d@2x.png", "temp_max": 29, "temp_min": 24, "precipitation": 80},
+    {"weekday": "Fri", "main": "Clear", "condition": "Sunny", "icon": "bi-brightness-high", "icon_url": "https://openweathermap.org/img/wn/01d@2x.png", "temp_max": 32, "temp_min": 26, "precipitation": 10},
 ]
 
 
@@ -92,6 +92,12 @@ def calculate_weather_walking_risk(weather_data):
     main = current.get("main", weather_data.get("main", "Clear"))
     weather_code = current.get("weather_code", weather_data.get("weather_code", 800)) or 800
 
+    # Basic Heat Index approximation for safety intelligence
+    heat_index = temp
+    if temp >= 27 and humidity >= 40:
+        # Simplified heat index logic
+        heat_index = temp + (0.55 * (humidity / 100) * (temp - 14.5))
+
     is_thunderstorm = main == "Thunderstorm" or 200 <= int(weather_code) <= 232
     is_rain = main in {"Rain", "Drizzle"} or 300 <= int(weather_code) <= 531
     is_poor_visibility = main in {"Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash"}
@@ -101,43 +107,55 @@ def calculate_weather_walking_risk(weather_data):
     alert_type = "safe"
     message = "Weather is generally safe for walking. Stay aware of nearby safety reports."
     advice = "Use your normal route, stay alert at crossings, and check active SafeWalk reports nearby."
-    reasons = ["normal temperature", "low rain risk"]
+    reasons = ["Normal temperature", "Low environmental risk"]
 
-    if temp >= 36 or (is_thunderstorm and precipitation >= 80) or wind >= 50:
+    # PRIORITY 1: CRITICAL RISKS
+    if heat_index >= 41 or temp >= 38:
         level = "Critical"
-        title = "Critical Weather Risk"
+        title = "Extreme Heat Warning"
         alert_type = "danger"
-        message = "Unsafe walking weather is likely in this area."
-        advice = "Avoid walking if possible. Wait for conditions to improve and use only well-lit, sheltered routes for urgent trips."
-        reasons = ["extreme heat or severe storm conditions"]
+        message = "Dangerously high temperatures detected. Heat stroke risk is extremely high."
+        advice = "Avoid all outdoor activity. If you must walk, stay in air-conditioned areas as much as possible."
+        reasons = ["Extreme heat index"]
+    elif (is_thunderstorm and precipitation >= 80) or wind >= 60:
+        level = "Critical"
+        title = "Severe Storm Warning"
+        alert_type = "danger"
+        message = "Life-threatening storm conditions are likely."
+        advice = "Seek immediate sturdy shelter. Do not attempt to walk through flooded areas or under trees."
+        reasons = ["Severe storm/wind conditions"]
+    
+    # PRIORITY 2: HIGH RISKS
+    elif heat_index >= 35 or temp >= 35:
+        level = "High"
+        title = "Excessive Heat"
+        alert_type = "danger"
+        message = "Severe heat is expected. Prolonged outdoor exposure is dangerous."
+        advice = "Avoid long walks during peak heat (10 AM - 4 PM). Bring water and stick to shaded routes."
+        reasons = ["High temperature/humidity"]
     elif is_thunderstorm:
         level = "High"
         title = "Thunderstorm Watch"
         alert_type = "danger"
         message = "Thunderstorms can create lightning, flooding, and poor visibility hazards."
-        advice = "Delay non-essential walks. Avoid open areas, flood-prone shortcuts, and poorly lit roads."
-        reasons = ["thunderstorm risk", "possible lightning"]
-    elif temp >= 33 and humidity >= 70:
-        level = "High"
-        title = "Excessive Heat"
-        alert_type = "danger"
-        message = "Severe heat is expected in this area."
-        advice = "Avoid long walks during peak heat. Bring water, use shaded routes, and avoid flood-prone shortcuts if rain starts."
-        reasons = ["high heat", "high humidity"]
-    elif temp >= 33 or precipitation >= 70 or is_rain:
+        advice = "Delay non-essential walks. Avoid open areas and poorly lit roads."
+        reasons = ["Thunderstorm risk"]
+
+    # PRIORITY 3: MEDIUM RISKS
+    elif temp >= 32 or precipitation >= 70 or is_rain:
         level = "Medium"
         title = "Weather Caution"
         alert_type = "caution"
-        message = "Weather may make some walking routes less safe."
-        advice = "Bring rain protection or water, choose shaded and well-drained routes, and avoid slippery sidewalks."
-        reasons = ["heat, rain, or slippery-route risk"]
-    elif wind >= 30 or is_poor_visibility or precipitation >= 45:
+        message = "Weather may make some walking routes less comfortable or safe."
+        advice = "Bring rain protection or extra water, and choose well-drained routes."
+        reasons = ["Moderate heat/rain risk"]
+    elif wind >= 30 or is_poor_visibility or precipitation >= 40:
         level = "Medium"
         title = "Walking Caution"
         alert_type = "caution"
-        message = "Wind, visibility, or rain chance may affect walking comfort and safety."
-        advice = "Use well-lit routes, keep distance from traffic, and avoid exposed crossings."
-        reasons = ["wind, visibility, or rain chance"]
+        message = "Wind or visibility may affect walking comfort."
+        advice = "Stay on well-lit paths and keep distance from heavy traffic."
+        reasons = ["Wind/visibility risk"]
 
     return {
         "level": level,
@@ -154,15 +172,15 @@ def sample_weather_data(location_name=DEFAULT_LOCATION):
         "source": "sample",
         "location": location_name or DEFAULT_LOCATION,
         "current": {
-            "temp": 33,
-            "condition": "Scattered thunderstorms",
-            "main": "Thunderstorm",
-            "weather_code": 200,
-            "precipitation": 45,
-            "humidity": 72,
-            "wind": 8,
-            "icon": "bi-cloud-lightning-rain",
-            "icon_url": "https://openweathermap.org/img/wn/11d@4x.png",
+            "temp": 34,
+            "condition": "Mostly Sunny",
+            "main": "Clear",
+            "weather_code": 800,
+            "precipitation": 5,
+            "humidity": 65,
+            "wind": 12,
+            "icon": "bi-brightness-high",
+            "icon_url": "https://openweathermap.org/img/wn/01d@4x.png",
             "day": "Friday",
             "updated": "Updated recently",
         },
