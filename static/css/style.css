@@ -4754,6 +4754,11 @@ body {
     font-weight: 900;
 }
 
+.google-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
 .auth-footer {
     text-align: center;
     margin-top: 1.4rem;

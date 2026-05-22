@@ -288,6 +288,22 @@ GOOGLE_CLIENT_ID=<optional>
 GOOGLE_CLIENT_SECRET=<optional>
 ```
 
+## Google Cloud Console Configuration
+
+To enable Google Authentication, configure your Google Cloud Console with these values:
+
+**Authorized JavaScript origins:**
+- `http://127.0.0.1:8000`
+- `http://localhost:8000`
+- `https://safe-walk-intelligence.vercel.app`
+
+**Authorized redirect URIs:**
+- `http://127.0.0.1:8000/accounts/google/login/callback/`
+- `http://localhost:8000/accounts/google/login/callback/`
+- `https://safe-walk-intelligence.vercel.app/accounts/google/login/callback/`
+
+*Note: The redirect URI must exactly match the allauth callback URL.*
+
 After adding `DATABASE_URL`, run the migrations against the production database:
 
 ```bash

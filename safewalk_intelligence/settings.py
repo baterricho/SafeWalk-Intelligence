@@ -155,13 +155,13 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
+        "APP": {
+            "client_id": config("GOOGLE_CLIENT_ID", default=""),
+            "secret": config("GOOGLE_CLIENT_SECRET", default=""),
+            "key": "",
+        },
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
-        "APP": {
-            "client_id": config("GOOGLE_CLIENT_ID", default="placeholder-client-id"),
-            "secret": config("GOOGLE_CLIENT_SECRET", default="placeholder-secret"),
-            "key": ""
-        }
     }
 }
 
