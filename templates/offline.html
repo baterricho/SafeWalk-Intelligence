@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Offline | SafeWalk Intelligence{% endblock %}
+
+{% block content %}
+<section class="offline-page">
+    <div class="offline-card">
+        <img src="{% static 'images/safewalk-logo.png' %}" alt="SafeWalk Intelligence" class="offline-logo">
+        <h1>You are offline.</h1>
+        <p>Please reconnect to view live SafeWalk reports, maps, and weather updates.</p>
+        <a class="btn btn-safewalk" href="{% url 'home' %}">Try Again</a>
+    </div>
+</section>
+{% endblock %}

@@ -1,6 +1,7 @@
-from django.http import JsonResponse
-from django.db import connection
 from django.conf import settings
+from django.contrib.staticfiles import finders
+from django.db import connection
+from django.http import FileResponse, Http404, JsonResponse
 
 
 def health_check(request):
@@ -32,3 +33,14 @@ def health_check(request):
         data["database"] = f"error: {str(e)}"
     
     return JsonResponse(data)
+
+
+def service_worker(request):
+    service_worker_path = finders.find("js/service-worker.js")
+    if not service_worker_path:
+        raise Http404("Service worker not found.")
+
+    response = FileResponse(open(service_worker_path, "rb"), content_type="application/javascript")
+    response["Service-Worker-Allowed"] = "/"
+    response["Cache-Control"] = "no-cache"
+    return response

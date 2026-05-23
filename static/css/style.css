@@ -16,6 +16,22 @@ body {
     color: var(--safewalk-text);
 }
 
+.safewalk-navbar-brand {
+    align-items: center;
+    display: inline-flex;
+    gap: .55rem;
+}
+
+.safewalk-navbar-brand img {
+    background: #ffffff;
+    border-radius: 10px;
+    display: block;
+    height: 34px;
+    object-fit: contain;
+    padding: 3px;
+    width: 34px;
+}
+
 .bg-safewalk {
     background: linear-gradient(90deg, var(--safewalk-green-dark), var(--safewalk-green));
 }
@@ -1447,17 +1463,22 @@ button.route-option-card:hover,
 }
 
 .landing-v2 .brand-mark {
-    color: var(--landing-teal);
+    background: #ffffff;
+    border: 1px solid rgba(15, 118, 110, .16);
+    border-radius: 16px;
+    box-shadow: 0 12px 26px rgba(15, 118, 110, .12);
     display: inline-grid;
     height: 54px;
+    overflow: hidden;
     place-items: center;
     width: 54px;
 }
 
-.landing-v2 .brand-mark svg {
+.landing-v2 .brand-mark img {
     display: block;
-    height: 54px;
-    width: 54px;
+    height: 46px;
+    object-fit: contain;
+    width: 46px;
 }
 
 .landing-v2 .landing-brand strong,
@@ -4188,6 +4209,47 @@ button.route-option-card:hover,
     margin: 1rem 0 0;
 }
 
+.offline-page {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-height: min(72vh, 720px);
+    padding: 2rem 0;
+}
+
+.offline-card {
+    background: #ffffff;
+    border: 1px solid #dbe7e5;
+    border-radius: 24px;
+    box-shadow: 0 22px 60px rgba(15, 118, 110, .14);
+    max-width: 620px;
+    padding: clamp(1.5rem, 5vw, 3rem);
+    text-align: center;
+}
+
+.offline-logo {
+    display: block;
+    height: 86px;
+    margin: 0 auto 1rem;
+    object-fit: contain;
+    width: 86px;
+}
+
+.offline-card h1 {
+    color: #0f172a;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 900;
+    margin: 0 0 .6rem;
+}
+
+.offline-card p {
+    color: #475569;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    margin: 0 auto 1.4rem;
+    max-width: 460px;
+}
+
 @media (max-width: 900px) {
     .current-weather-grid {
         grid-template-columns: 1fr;
@@ -4952,11 +5014,18 @@ button.route-option-card:hover,
     border-radius: 20px;
     display: grid;
     place-items: center;
-    background: #0f766e;
-    color: white;
-    font-size: 2rem;
+    background: #ffffff;
+    border: 1px solid rgba(15, 118, 110, .16);
     margin-bottom: 1.2rem;
     box-shadow: 0 18px 40px rgba(15, 118, 110, 0.25);
+    overflow: hidden;
+}
+
+.auth-logo img {
+    display: block;
+    height: 54px;
+    object-fit: contain;
+    width: 54px;
 }
 
 .auth-brand h1 {

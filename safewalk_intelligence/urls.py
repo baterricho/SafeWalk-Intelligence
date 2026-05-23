@@ -2,16 +2,18 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
+from django.views.generic import RedirectView, TemplateView
 
 from accounts import views as account_views
 from dashboard import views as dashboard_views
 
 
-from .views import health_check
+from .views import health_check, service_worker
 
 urlpatterns = [
     path("health/", health_check, name="health_check"),
+    path("offline/", TemplateView.as_view(template_name="offline.html"), name="offline"),
+    path("service-worker.js", service_worker, name="service_worker"),
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/", include("reports.urls")),
