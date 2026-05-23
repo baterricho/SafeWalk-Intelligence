@@ -57,6 +57,9 @@ class SavedRouteForm(forms.ModelForm):
             "end_longitude",
             "usual_time",
             "notes",
+            "route_geometry",
+            "route_distance_km",
+            "route_duration_min",
         ]
         labels = {
             "start_location": "Start point landmark",
@@ -82,6 +85,9 @@ class SavedRouteForm(forms.ModelForm):
             "end_longitude": forms.HiddenInput(),
             "usual_time": forms.TimeInput(attrs={"class": "form-control", "type": "time", "required": True}),
             "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3, "maxlength": 1000}),
+            "route_geometry": forms.HiddenInput(),
+            "route_distance_km": forms.HiddenInput(),
+            "route_duration_min": forms.HiddenInput(),
         }
 
     def clean(self):

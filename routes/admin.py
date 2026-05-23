@@ -23,6 +23,8 @@ class SavedRouteAdmin(admin.ModelAdmin):
         "start_longitude",
         "end_latitude",
         "end_longitude",
+        "route_distance_km",
+        "route_duration_min",
         "created_at",
     ]
     list_filter = ["created_at", "updated_at"]

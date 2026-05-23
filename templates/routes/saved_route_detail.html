@@ -31,6 +31,18 @@
                     <span>Usual walking time</span>
                     <strong>{{ route.usual_time|time:"g:i A" }}</strong>
                 </div>
+                {% if route.route_distance_km %}
+                    <div>
+                        <span>Route distance</span>
+                        <strong>{{ route.route_distance_km }} km</strong>
+                    </div>
+                {% endif %}
+                {% if route.route_duration_min %}
+                    <div>
+                        <span>Estimated walk</span>
+                        <strong>{{ route.route_duration_min }} min</strong>
+                    </div>
+                {% endif %}
                 <div>
                     <span>Date created</span>
                     <strong>{{ route.created_at|date:"M d, Y" }}</strong>
@@ -58,6 +70,7 @@
         <section class="map-card mb-4">
             <h2 class="h4 mb-1">Route Map</h2>
             <p class="small text-muted">This map shows your saved start and end points.</p>
+            <p id="saved-route-detail-status" class="pin-status mb-2">Finding road-connected route...</p>
             <div
                 id="saved-route-detail-map"
                 class="saved-route-detail-map"
@@ -67,6 +80,7 @@
                 data-end-lng="{{ route.end_longitude }}"
                 data-start-label="{{ route.start_location }}"
                 data-end-label="{{ route.end_location }}"
+                data-status-id="saved-route-detail-status"
             ></div>
         </section>
     </div>
@@ -107,9 +121,12 @@
 </section>
 {% endblock %}
 {% block extra_js %}
+{{ route.route_geometry|json_script:"saved-route-geometry-data" }}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    window.SafeWalkRouteMap.init("saved-route-detail-map");
+    window.SafeWalkRouteMap.init("saved-route-detail-map", {
+        geometryElementId: "saved-route-geometry-data"
+    });
 });
 </script>
 {% endblock %}

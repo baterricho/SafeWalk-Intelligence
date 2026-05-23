@@ -108,6 +108,54 @@
 
     window.reverseGeocodeAndFill = reverseGeocodeAndFill;
 
+    function toLeafletPoint(point) {
+        if (Array.isArray(point)) return [parseFloat(point[0]), parseFloat(point[1])];
+        return [parseFloat(point.lat), parseFloat(point.lng)];
+    }
+
+    async function fetchRoadRoute(startLatLng, endLatLng) {
+        const start = toLeafletPoint(startLatLng);
+        const end = toLeafletPoint(endLatLng);
+        const profiles = ["foot", "driving"];
+
+        for (const profile of profiles) {
+            const url = `https://router.project-osrm.org/route/v1/${profile}/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) continue;
+                const data = await response.json();
+                const route = data.routes && data.routes[0];
+                const coordinates = route && route.geometry && route.geometry.coordinates;
+                if (Array.isArray(coordinates) && coordinates.length > 1) {
+                    const points = coordinates.map(function (coordinate) {
+                        return [coordinate[1], coordinate[0]];
+                    });
+                    return {
+                        points: points,
+                        geojson: points,
+                        distanceKm: route.distance / 1000,
+                        durationMin: route.duration / 60,
+                        routed: true,
+                        provider: `osrm-${profile}`
+                    };
+                }
+            } catch (error) {
+                // Try the next OSRM profile before falling back to a direct line.
+            }
+        }
+
+        return {
+            points: [start, end],
+            geojson: null,
+            routed: false,
+            message: "Road route unavailable. Showing direct line temporarily. Try placing the pins closer to a road or walkway."
+        };
+    }
+
+    window.SafeWalkRouting = {
+        fetchRoadRoute: fetchRoadRoute
+    };
+
     window.SafeWalkDashboard = {
         init: function (config) {
             const dataNode = document.getElementById(config.dataElement);
@@ -348,9 +396,10 @@
     };
 
     window.SafeWalkRouteMap = {
-        init: function (elementId) {
+        init: function (elementId, options) {
             const node = document.getElementById(elementId);
             if (!node || !window.L) return;
+            const settings = options || {};
             const start = [parseFloat(node.dataset.startLat), parseFloat(node.dataset.startLng)];
             const end = [parseFloat(node.dataset.endLat), parseFloat(node.dataset.endLng)];
             if (start.some(Number.isNaN) || end.some(Number.isNaN)) return;
@@ -365,8 +414,57 @@
             const endMarker = L.marker(end, { icon: markerIcon("critical") })
                 .addTo(map)
                 .bindPopup(`<strong>End</strong><br>${escapeHtml(endLabel)}`);
-            const routeLine = L.polyline([start, end], { color: "#0f766e", weight: 4, opacity: 0.9 }).addTo(map);
-            map.fitBounds(routeLine.getBounds(), { padding: [35, 35], maxZoom: 17 });
+
+            const status = document.getElementById(node.dataset.statusId || settings.statusId);
+
+            function statusText(message, pinned) {
+                if (!status) return;
+                status.textContent = message;
+                status.classList.toggle("pinned", Boolean(pinned));
+            }
+
+            function savedGeometry() {
+                const geometryNode = settings.geometryElementId ? document.getElementById(settings.geometryElementId) : null;
+                if (!geometryNode) return null;
+                try {
+                    const geometry = JSON.parse(geometryNode.textContent || "null");
+                    return Array.isArray(geometry) && geometry.length > 1 ? geometry : null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            async function drawRoute() {
+                const geometry = savedGeometry();
+                let routeResult = null;
+                if (geometry) {
+                    routeResult = { points: geometry, routed: true };
+                    statusText("Saved road-connected route loaded.", true);
+                } else {
+                    statusText("Finding road-connected route...", false);
+                    routeResult = await fetchRoadRoute(start, end);
+                }
+
+                const routeLine = L.polyline(routeResult.points, {
+                    color: "#0f766e",
+                    weight: 5,
+                    opacity: 0.9,
+                    lineJoin: "round"
+                }).addTo(map);
+                map.fitBounds(routeLine.getBounds(), { padding: [35, 35], maxZoom: 17 });
+
+                if (routeResult.routed) {
+                    if (routeResult.distanceKm && routeResult.durationMin) {
+                        statusText(`Estimated route: ${routeResult.distanceKm.toFixed(1)} km · ${Math.round(routeResult.durationMin)} min walk`, true);
+                    } else {
+                        statusText("Route pinned successfully. Road-connected route found.", true);
+                    }
+                } else {
+                    statusText(routeResult.message || "Road route unavailable. Showing direct line temporarily.", false);
+                }
+            }
+
+            drawRoute();
             startMarker.openPopup();
             setTimeout(function () { map.invalidateSize(); }, 150);
         }
@@ -470,13 +568,17 @@
                 startLat: form.querySelector("[name='start_latitude']"),
                 startLng: form.querySelector("[name='start_longitude']"),
                 endLat: form.querySelector("[name='end_latitude']"),
-                endLng: form.querySelector("[name='end_longitude']")
+                endLng: form.querySelector("[name='end_longitude']"),
+                routeGeometry: form.querySelector("[name='route_geometry']"),
+                routeDistanceKm: form.querySelector("[name='route_distance_km']"),
+                routeDurationMin: form.querySelector("[name='route_duration_min']")
             };
             const map = L.map(config.mapId).setView([9.7786, 118.7353], 15);
             let selectedPinMode = "start";
             let startMarker = null;
             let endMarker = null;
             let routeLine = null;
+            let routeRequestId = 0;
 
             addBaseLayers(map);
 
@@ -497,17 +599,68 @@
                 };
             }
 
-            function updateLine() {
+            function clearRouteMetadata() {
+                if (inputs.routeGeometry) inputs.routeGeometry.value = "";
+                if (inputs.routeDistanceKm) inputs.routeDistanceKm.value = "";
+                if (inputs.routeDurationMin) inputs.routeDurationMin.value = "";
+            }
+
+            function saveRouteMetadata(routeResult) {
+                if (routeResult.routed && routeResult.geojson) {
+                    if (inputs.routeGeometry) inputs.routeGeometry.value = JSON.stringify(routeResult.geojson);
+                    if (inputs.routeDistanceKm && routeResult.distanceKm) inputs.routeDistanceKm.value = routeResult.distanceKm.toFixed(2);
+                    if (inputs.routeDurationMin && routeResult.durationMin) inputs.routeDurationMin.value = String(Math.round(routeResult.durationMin));
+                } else {
+                    clearRouteMetadata();
+                }
+            }
+
+            function setPartialStatus(points) {
+                if (points.start && !points.end) {
+                    status.textContent = "Start point pinned. Now pin your destination.";
+                    status.classList.add("pinned");
+                } else if (!points.start && points.end) {
+                    status.textContent = "End point pinned. Now pin your starting point.";
+                    status.classList.add("pinned");
+                } else if (!points.start && !points.end) {
+                    status.textContent = "No route pinned yet.";
+                    status.classList.remove("pinned");
+                }
+            }
+
+            async function updateLine() {
                 const points = pointValues();
+                const currentRequestId = ++routeRequestId;
                 if (routeLine) {
                     map.removeLayer(routeLine);
                     routeLine = null;
                 }
+                clearRouteMetadata();
                 if (points.start && points.end) {
-                    routeLine = L.polyline([points.start, points.end], { color: "#0f766e", weight: 4 }).addTo(map);
+                    status.textContent = "Finding road-connected route...";
+                    status.classList.remove("pinned");
+                    const routeResult = await fetchRoadRoute(points.start, points.end);
+                    if (currentRequestId !== routeRequestId) return;
+
+                    routeLine = L.polyline(routeResult.points, {
+                        color: "#0f766e",
+                        weight: 5,
+                        opacity: 0.9,
+                        lineJoin: "round"
+                    }).addTo(map);
                     map.fitBounds(routeLine.getBounds(), { padding: [35, 35], maxZoom: 17 });
-                    status.textContent = "Route pinned successfully.";
-                    status.classList.add("pinned");
+                    saveRouteMetadata(routeResult);
+                    if (routeResult.routed) {
+                        status.textContent = routeResult.distanceKm && routeResult.durationMin
+                            ? `Estimated route: ${routeResult.distanceKm.toFixed(1)} km · ${Math.round(routeResult.durationMin)} min walk`
+                            : "Route pinned successfully. Road-connected route found.";
+                        status.classList.add("pinned");
+                    } else {
+                        status.textContent = routeResult.message || "Road route unavailable. Showing direct line temporarily.";
+                        status.classList.remove("pinned");
+                    }
+                } else {
+                    setPartialStatus(points);
                 }
             }
 
@@ -520,7 +673,7 @@
                     } else {
                         startMarker = L.marker([lat, lng], { icon: markerIcon("low") }).addTo(map).bindPopup("Start point");
                     }
-                    status.textContent = "Start point pinned.";
+                    status.textContent = "Start point pinned. Now pin your destination.";
                     reverseGeocodeAndFill(
                         inputs.startLat.value,
                         inputs.startLng.value,
@@ -528,7 +681,7 @@
                         config.statusId,
                         {
                             loadingText: "Getting start location name...",
-                            successText: "Start point pinned.",
+                            successText: "Start point pinned. Now pin your destination.",
                             failureText: "Location name unavailable. You can type the landmark manually.",
                             errorText: "Location name unavailable. You can type the landmark manually."
                         }
@@ -541,7 +694,7 @@
                     } else {
                         endMarker = L.marker([lat, lng], { icon: markerIcon("critical") }).addTo(map).bindPopup("End point");
                     }
-                    status.textContent = "End point pinned.";
+                    status.textContent = "End point pinned. Now pin your starting point.";
                     reverseGeocodeAndFill(
                         inputs.endLat.value,
                         inputs.endLng.value,
@@ -549,7 +702,7 @@
                         config.statusId,
                         {
                             loadingText: "Getting end location name...",
-                            successText: "End point pinned.",
+                            successText: "End point pinned. Now pin your starting point.",
                             failureText: "Location name unavailable. You can type the landmark manually.",
                             errorText: "Location name unavailable. You can type the landmark manually."
                         }
@@ -564,13 +717,13 @@
                 if (points.start) {
                     startMarker = L.marker(points.start, { icon: markerIcon("low") }).addTo(map).bindPopup("Start point");
                     map.setView(points.start, 17);
-                    status.textContent = "Start point pinned.";
+                    status.textContent = "Start point pinned. Now pin your destination.";
                     status.classList.add("pinned");
                 }
                 if (points.end) {
                     endMarker = L.marker(points.end, { icon: markerIcon("critical") }).addTo(map).bindPopup("End point");
                     map.setView(points.end, 17);
-                    status.textContent = "End point pinned.";
+                    status.textContent = "End point pinned. Now pin your starting point.";
                     status.classList.add("pinned");
                 }
                 updateLine();

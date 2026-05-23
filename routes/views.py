@@ -104,6 +104,49 @@ def point_to_route_distance_km(route, report):
     return math.hypot(px - nearest_x, py - nearest_y)
 
 
+def point_to_segment_distance_km(start, end, point):
+    start_lat, start_lng = map(float, start)
+    end_lat, end_lng = map(float, end)
+    point_lat, point_lng = map(float, point)
+
+    average_lat = math.radians((start_lat + end_lat + point_lat) / 3)
+    lat_scale = 111.32
+    lng_scale = 111.32 * math.cos(average_lat)
+
+    sx, sy = start_lng * lng_scale, start_lat * lat_scale
+    ex, ey = end_lng * lng_scale, end_lat * lat_scale
+    px, py = point_lng * lng_scale, point_lat * lat_scale
+
+    dx = ex - sx
+    dy = ey - sy
+    if dx == 0 and dy == 0:
+        return distance_km(start_lat, start_lng, point_lat, point_lng)
+
+    t = max(0, min(1, ((px - sx) * dx + (py - sy) * dy) / (dx * dx + dy * dy)))
+    nearest_x = sx + t * dx
+    nearest_y = sy + t * dy
+    return math.hypot(px - nearest_x, py - nearest_y)
+
+
+def point_to_route_geometry_distance_km(route_geometry, report):
+    if not isinstance(route_geometry, list) or len(route_geometry) < 2:
+        return None
+
+    report_point = [float(report.latitude), float(report.longitude)]
+    distances = []
+    for index in range(len(route_geometry) - 1):
+        start = route_geometry[index]
+        end = route_geometry[index + 1]
+        if (
+            isinstance(start, list)
+            and isinstance(end, list)
+            and len(start) == 2
+            and len(end) == 2
+        ):
+            distances.append(point_to_segment_distance_km(start, end, report_point))
+    return min(distances) if distances else None
+
+
 def nearby_reports_for_route(saved_route, user, radius_km=1.0):
     reports = visible_reports_for_user(user).exclude(status=SafetyReport.Status.REJECTED)
     keyword_matches = reports.filter(
@@ -120,7 +163,8 @@ def nearby_reports_for_route(saved_route, user, radius_km=1.0):
     for report in reports[:500]:
         start_distance = distance_km(saved_route.start_latitude, saved_route.start_longitude, report.latitude, report.longitude)
         end_distance = distance_km(saved_route.end_latitude, saved_route.end_longitude, report.latitude, report.longitude)
-        route_distance = point_to_route_distance_km(saved_route, report)
+        routed_distance = point_to_route_geometry_distance_km(saved_route.route_geometry, report)
+        route_distance = routed_distance if routed_distance is not None else point_to_route_distance_km(saved_route, report)
         if min(start_distance, end_distance, route_distance) <= radius_km:
             nearby_ids.append(report.id)
 

@@ -63,6 +63,9 @@ class SavedRouteSerializer(serializers.ModelSerializer):
             "end_longitude",
             "usual_time",
             "notes",
+            "route_geometry",
+            "route_distance_km",
+            "route_duration_min",
             "created_at",
             "updated_at",
         ]

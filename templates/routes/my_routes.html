@@ -36,6 +36,9 @@
                     {{ form.start_longitude }}
                     {{ form.end_latitude }}
                     {{ form.end_longitude }}
+                    {{ form.route_geometry }}
+                    {{ form.route_distance_km }}
+                    {{ form.route_duration_min }}
                 </div>
 
                 <div class="mb-3">
@@ -84,6 +87,13 @@
                             <i class="bi bi-exclamation-circle"></i> Route pins not set yet.
                         {% endif %}
                     </div>
+                    {% if route.route_distance_km or route.route_duration_min %}
+                        <div class="small text-muted mb-2">
+                            {% if route.route_distance_km %}{{ route.route_distance_km }} km{% endif %}
+                            {% if route.route_distance_km and route.route_duration_min %} · {% endif %}
+                            {% if route.route_duration_min %}{{ route.route_duration_min }} min walk{% endif %}
+                        </div>
+                    {% endif %}
                     {% if route.notes %}<p class="small text-muted mb-3">{{ route.notes|truncatechars:120 }}</p>{% endif %}
                     <div class="d-flex gap-2 flex-wrap">
                         <a class="btn btn-sm btn-safewalk" href="{% url 'saved_route_detail' route.pk %}">View Route</a>
