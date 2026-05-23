@@ -36,15 +36,6 @@
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label">Status</label>
-            <select class="form-select" name="status">
-                <option value="">All</option>
-                {% for value, label in status_choices %}
-                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-2">
             <button class="btn btn-safewalk w-100">Apply</button>
         </div>
     </div>
@@ -57,7 +48,6 @@
                 <div class="d-flex justify-content-between gap-2 flex-wrap">
                     <span class="badge risk-{{ report.risk_level }}">{{ report.get_risk_level_display }}</span>
                     <span class="badge score-badge">{{ report.safety_score }} / 100</span>
-                    <span class="badge status-{{ report.status }}">{{ report.get_status_display }}</span>
                 </div>
 
                 <h2 class="h5 mt-3 mb-1">{{ report.title }}</h2>
@@ -76,10 +66,10 @@
 
                 <div class="community-line small mb-3">
                     <div class="mb-1">
-                        <strong>{{ report.get_credibility_label_display }}</strong> · {{ report.credibility_score }} / 100
+                        <strong>Evidence score</strong> · {{ report.credibility_score }} / 100
                     </div>
                     <div>
-                        {{ report.confirmation_count }} confirmations · {{ report.dispute_count }} disputes · {{ report.comment_count }} comments
+                        {{ report.confirmation_count }} community signals · {{ report.dispute_count }} disputes · {{ report.comment_count }} comments
                     </div>
                 </div>
 

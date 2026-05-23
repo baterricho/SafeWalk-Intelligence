@@ -260,7 +260,7 @@
             const search = document.getElementById(config.searchId);
             const category = document.getElementById(config.categoryId);
             const risk = document.getElementById(config.riskId);
-            const status = document.getElementById(config.statusId);
+            const status = config.statusId ? document.getElementById(config.statusId) : null;
             const clear = document.getElementById(config.clearId);
 
             function normalizeReport(report) {
@@ -289,7 +289,7 @@
                     return (!q || haystack.includes(q))
                         && (!category.value || report.category === category.value)
                         && (!risk.value || report.risk_level === risk.value)
-                        && (!status.value || report.status === status.value);
+                        && (!status || !status.value || report.status === status.value);
                 });
             }
 
@@ -335,12 +335,11 @@
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <div class="d-flex gap-2">
                                 <span class="score-chip">${report.safety_score} / 100</span>
-                                <span class="status-chip status-${report.status}">${escapeHtml(report.status_display)}</span>
                             </div>
                             <a class="btn btn-sm btn-outline-teal" href="${report.detail_url}">View Details</a>
                         </div>
                         <div class="community-line small mt-3">
-                            ${report.confirmation_count || 0} confirmations - ${report.comment_count || 0} comments
+                            ${report.confirmation_count || 0} community signals - ${report.comment_count || 0} comments
                         </div>
                     `;
                     list.appendChild(item);
@@ -383,7 +382,7 @@
                 });
             }
 
-            [search, category, risk, status].forEach(function (input) {
+            [search, category, risk, status].filter(Boolean).forEach(function (input) {
                 input.addEventListener("input", render);
                 input.addEventListener("change", render);
             });
@@ -399,12 +398,10 @@
                     // Reset filters first
                     category.value = "";
                     risk.value = "";
-                    status.value = "";
+                    if (status) status.value = "";
 
                     if (filter === "critical") risk.value = "critical";
                     else if (filter === "high") risk.value = "high";
-                    else if (filter === "resolved") status.value = "resolved";
-                    else if (filter === "verified") status.value = "verified";
                     // Note: "nearby" would require geo logic, for now we just show all or leave as is
 
                     render();
@@ -415,7 +412,7 @@
                 search.value = "";
                 category.value = "";
                 risk.value = "";
-                status.value = "";
+                if (status) status.value = "";
                 chips.forEach(c => c.classList.remove("active"));
                 const allChip = document.querySelector('[data-filter="all"]');
                 if (allChip) allChip.classList.add("active");
@@ -464,12 +461,11 @@
             const title = node.dataset.title || "Report location";
             const risk = node.dataset.risk || "Unknown risk";
             const riskKey = node.dataset.riskKey || "critical";
-            const status = node.dataset.status || "Unknown status";
             const map = L.map(elementId).setView([lat, lng], 17);
             addBaseLayers(map);
             L.marker([lat, lng], { icon: markerIcon(riskKey) })
                 .addTo(map)
-                .bindPopup(`<strong>${escapeHtml(title)}</strong><br>Risk: ${escapeHtml(risk)}<br>Status: ${escapeHtml(status)}`)
+                .bindPopup(`<strong>${escapeHtml(title)}</strong><br>Risk: ${escapeHtml(risk)}`)
                 .openPopup();
             setTimeout(function () { map.invalidateSize(); }, 100);
         }

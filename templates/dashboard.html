@@ -86,12 +86,6 @@
                 </select>
             </div>
             <div class="col-lg-2">
-                <select id="dashboard-status" class="form-select">
-                    <option value="">All Statuses</option>
-                    {% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="col-lg-2">
                 <button id="dashboard-clear" class="btn btn-outline-secondary w-100" type="button">Clear Filters</button>
             </div>
         </div>
@@ -99,9 +93,7 @@
             <span class="filter-chip active" data-filter="all">All</span>
             <span class="filter-chip" data-filter="critical">Critical</span>
             <span class="filter-chip" data-filter="high">High Risk</span>
-            <span class="filter-chip" data-filter="verified">Verified</span>
             <span class="filter-chip" data-filter="nearby">Nearby</span>
-            <span class="filter-chip" data-filter="resolved">Resolved</span>
         </div>
     </div>
 
@@ -124,7 +116,7 @@
                     <div class="legend-item"><span class="dot red"></span> Critical</div>
                     <div class="legend-item"><span class="dot orange"></span> High</div>
                     <div class="legend-item"><span class="dot yellow"></span> Medium</div>
-                    <div class="legend-item"><span class="dot green"></span> Resolved</div>
+                    <div class="legend-item"><span class="dot green"></span> Lower Risk</div>
                 </div>
             </div>
         </div>
@@ -231,8 +223,8 @@
                 <div class="insight-card community-activity-card">
                     <h3 class="insight-title">Community Activity</h3>
                     <ul class="activity-list mt-3">
-                        <li><i class="bi bi-people"></i> 2 users confirmed a report</li>
-                        <li><i class="bi bi-check-circle"></i> 1 report marked resolved</li>
+                        <li><i class="bi bi-people"></i> 2 users shared report feedback</li>
+                        <li><i class="bi bi-check-circle"></i> 1 report received a community update</li>
                         <li><i class="bi bi-exclamation-circle text-danger"></i> 1 new critical issue submitted</li>
                     </ul>
                 </div>
@@ -265,7 +257,7 @@ document.addEventListener("DOMContentLoaded", function () {
         searchId: "dashboard-search",
         categoryId: "dashboard-category",
         riskId: "dashboard-risk",
-        statusId: "dashboard-status",
+        statusId: null,
         clearId: "dashboard-clear",
         liveUrl: "{% url 'dashboard_reports_api' %}",
         pollInterval: 15000
