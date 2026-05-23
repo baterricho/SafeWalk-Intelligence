@@ -138,6 +138,7 @@
                 <div class="weather-condition-box">
                     <h3>Weather</h3>
                     <span data-weather-current-day>Friday</span>
+                    <small data-weather-current-date>{{ weather_today.date|default:"May 23, 2026" }}</small>
                     <strong data-weather-primary-condition>Scattered thunderstorms</strong>
                     <p class="weather-index-probability mb-0">
                         Index Probability: <strong data-weather-index-probability>{{ weather_today.index_probability|default:78 }}%</strong>
@@ -158,19 +159,32 @@
                 </svg>
             </div>
 
-            <div class="forecast-row" data-weather-list>
+            <div class="weather-calendar-heading">
+                <div>
+                    <span>Calendar Forecast</span>
+                    <strong>Walking safety by date</strong>
+                </div>
+                <small>Updates automatically with the latest forecast.</small>
+            </div>
+
+            <div class="forecast-row weather-calendar-row" data-weather-list>
                 {% for day in daily_forecast|slice:":8" %}
-                    <article class="forecast-day-card {% if forloop.first %}active{% endif %}">
-                        <span>{{ day.weekday }}</span>
-                        <small>{{ day.date_short }}</small>
-                        {% if day.icon_url %}
-                            <img class="forecast-weather-img" src="{{ day.icon_url }}" alt="{{ day.condition }}">
-                        {% else %}
-                            <i class="bi {{ day.icon }}" aria-hidden="true"></i>
-                        {% endif %}
-                        <strong>{{ day.high|default:day.temp_max }}&deg; / {{ day.low|default:day.temp_min }}&deg;</strong>
+                    <article class="forecast-day-card weather-calendar-card {% if forloop.first %}active{% endif %}">
+                        <div class="weather-calendar-date">
+                            <span>{{ day.weekday }}</span>
+                            <strong>{{ day.date_short }}</strong>
+                        </div>
+                        <div class="weather-calendar-icon">
+                            {% if day.icon_url %}
+                                <img class="forecast-weather-img" src="{{ day.icon_url }}" alt="{{ day.condition }}">
+                            {% else %}
+                                <i class="bi {{ day.icon }}" aria-hidden="true"></i>
+                            {% endif %}
+                        </div>
+                        <p>{{ day.condition }}</p>
+                        <strong class="weather-calendar-temp">{{ day.high|default:day.temp_max }}&deg; / {{ day.low|default:day.temp_min }}&deg;</strong>
                         <small class="weather-index-badge weather-index-{{ day.index_key }}">{{ day.index_label }}</small>
-                        <small>{{ day.index_probability }}%</small>
+                        <small class="weather-calendar-probability">Index Probability: {{ day.index_probability }}%</small>
                     </article>
                 {% endfor %}
             </div>

@@ -1435,6 +1435,7 @@
             setText("[data-weather-current-humidity]", `${rounded(current.humidity, 72)}%`);
             setText("[data-weather-current-wind]", `${rounded(current.wind, 8)} km/h`);
             setText("[data-weather-current-day]", current.day || formatFullWeekday(new Date().toISOString()));
+            setText("[data-weather-current-date]", today.date || current.date || formatDate(new Date().toISOString()));
             setText("[data-weather-today-date]", `${today.day || current.day || formatFullWeekday(new Date().toISOString())}, ${today.date || formatDate(new Date().toISOString())}`);
             setText("[data-weather-primary-condition]", current.condition || "Scattered thunderstorms");
             setText("[data-weather-index-probability]", `${rounded(todayIndex.index_probability, 0)}%`);
@@ -1446,13 +1447,16 @@
                         ? `<img class="forecast-weather-img" src="${escapeHtml(day.icon_url)}" alt="${escapeHtml(day.condition || "Forecast weather")}">`
                         : `<i class="bi ${escapeHtml(day.icon)}" aria-hidden="true"></i>`;
                     return `
-                        <article class="forecast-day-card${index === 0 ? " active" : ""}">
-                            <span>${escapeHtml(day.weekday)}</span>
-                            <small>${escapeHtml(day.date_short || "")}</small>
-                            ${iconMarkup}
-                            <strong>${rounded(day.high || day.temp_max, 0)}&deg; / ${rounded(day.low || day.temp_min, 0)}&deg;</strong>
+                        <article class="forecast-day-card weather-calendar-card${index === 0 ? " active" : ""}">
+                            <div class="weather-calendar-date">
+                                <span>${escapeHtml(day.weekday || day.day || "")}</span>
+                                <strong>${escapeHtml(day.date_short || day.date || "")}</strong>
+                            </div>
+                            <div class="weather-calendar-icon">${iconMarkup}</div>
+                            <p>${escapeHtml(day.condition || "Weather update")}</p>
+                            <strong class="weather-calendar-temp">${rounded(day.high || day.temp_max, 0)}&deg; / ${rounded(day.low || day.temp_min, 0)}&deg;</strong>
                             <small class="weather-index-badge weather-index-${escapeHtml(dayIndex.index_key)}">${escapeHtml(dayIndex.index_label)}</small>
-                            <small>${rounded(dayIndex.index_probability, 0)}%</small>
+                            <small class="weather-calendar-probability">Index Probability: ${rounded(dayIndex.index_probability, 0)}%</small>
                         </article>
                     `;
                 }).join("");

@@ -263,7 +263,7 @@ def sample_weather_data(location_name=DEFAULT_LOCATION):
             "wind": 12,
             "icon": "bi-brightness-high",
             "icon_url": "https://openweathermap.org/img/wn/01d@4x.png",
-            "day": "Friday",
+            "day": now.strftime("%A"),
             "date": _format_display_date(now),
             "date_short": _format_display_date(now, short=True),
             "updated": "Updated recently",
@@ -509,6 +509,7 @@ def _enrich_weather_indexes(weather):
         if "date" not in day:
             forecast_date = base_date + timedelta(days=index)
             day["day"] = forecast_date.strftime("%A")
+            day["weekday"] = forecast_date.strftime("%a")
             day["date"] = _format_display_date(forecast_date)
             day["date_short"] = _format_display_date(forecast_date, short=True)
         day["temperature"] = day.get("temperature", day.get("temp_max", 0))
