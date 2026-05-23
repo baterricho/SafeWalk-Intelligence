@@ -67,8 +67,10 @@ def login_page(request):
         return redirect("dashboard")
     form = SafeWalkLoginForm(request, data=request.POST or None)
     if request.method == "POST" and form.is_valid():
-        login(request, form.get_user())
-        return redirect("dashboard")
+        user = form.get_user()
+        if user:
+            login(request, user)
+            return redirect("dashboard")
     return render(request, "accounts/login.html", {"form": form})
 
 

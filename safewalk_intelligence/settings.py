@@ -14,6 +14,11 @@ DEBUG_RAW = str(config("DEBUG", default=DEBUG_DEFAULT)).strip().lower()
 DEBUG = DEBUG_RAW not in {"0", "false", "no", "off", "production", "prod"}
 
 ALLOWED_HOSTS = list(config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.vercel.app,safe-walk-intelligence.vercel.app", cast=Csv()))
+if DEBUG:
+    for host in ["localhost", "127.0.0.1"]:
+        if host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
+
 VERCEL_URL = config("VERCEL_URL", default="")
 if VERCEL_URL and VERCEL_URL not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(VERCEL_URL)
@@ -214,6 +219,14 @@ SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=not DEBUG, cast=bool
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=not DEBUG, cast=bool)
 CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
 
+# Local development override: if we are not on Vercel and it's local, avoid secure-only cookies
+# to prevent CSRF 403 on localhost.
+if not IS_VERCEL and not config("FORCE_SECURE_COOKIES", default=False, cast=bool):
+    if DEBUG:
+        SECURE_SSL_REDIRECT = False
+        SESSION_COOKIE_SECURE = False
+        CSRF_COOKIE_SECURE = False
+
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:8000,http://127.0.0.1:8000",
@@ -226,6 +239,12 @@ CSRF_TRUSTED_ORIGINS = list(
         cast=Csv(),
     )
 )
+# Ensure local development origins are always trusted in DEBUG mode
+if DEBUG:
+    for origin in ["http://localhost:8000", "http://127.0.0.1:8000"]:
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
+
 if VERCEL_URL:
     vercel_origin = f"https://{VERCEL_URL}"
     if vercel_origin not in CSRF_TRUSTED_ORIGINS:
