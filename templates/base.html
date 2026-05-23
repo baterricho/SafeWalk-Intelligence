@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260523-route-options">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260523-weather-auth-hero">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -25,19 +25,21 @@
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link" href="{% url 'report_list' %}">Reports</a></li>
-                {% if user.is_authenticated %}
+                {% if request.user.is_authenticated %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'report_create' %}">Submit Report</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'my_routes' %}">My Routes</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'route_notes' %}">Route Notes</a></li>
-                    {% if user.is_staff or user.profile.is_admin_role %}
+                    {% if request.user.is_staff or request.user.profile.is_admin_role %}
                         <li class="nav-item"><a class="nav-link" href="{% url 'admin_dashboard' %}">Admin</a></li>
                     {% endif %}
                 {% endif %}
             </ul>
             <div class="d-flex align-items-center gap-2">
-                {% if user.is_authenticated %}
-                    <span class="navbar-text small">Trust: {{ user.profile.trust_score }}</span>
+                {% if request.user.is_authenticated %}
+                    <span class="navbar-text small">Signed in as {{ request.user.username }}</span>
+                    <span class="navbar-text small">Trust: {{ request.user.profile.trust_score }}</span>
+                    <a class="btn btn-light btn-sm" href="{% url 'dashboard' %}">Dashboard</a>
                     <a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">Logout</a>
                 {% else %}
                     <a class="btn btn-outline-light btn-sm" href="{% url 'login' %}">Login</a>
@@ -65,8 +67,16 @@
     </div>
 </main>
 
+<div class="cookie-notice" data-cookie-notice hidden>
+    <p>SafeWalk uses essential cookies to keep you signed in and protect your account.</p>
+    <div>
+        <button class="btn btn-sm btn-safewalk" type="button" data-cookie-accept>Accept</button>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'home' %}#features">Learn More</a>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{% static 'js/main.js' %}?v=20260523-route-options"></script>
+<script src="{% static 'js/main.js' %}?v=20260523-weather-auth-hero"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

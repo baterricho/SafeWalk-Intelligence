@@ -62,7 +62,17 @@ def home_page(request):
         from .weather_service import sample_weather_data
         weather = sample_weather_data()
         
-    return render(request, "home.html", {"summary": summary, "clusters": clusters, "weather": weather})
+    return render(
+        request,
+        "home.html",
+        {
+            "summary": summary,
+            "clusters": clusters,
+            "weather": weather,
+            "weather_today": weather.get("weather_today", weather.get("current", {})),
+            "daily_forecast": weather.get("daily_forecast", weather.get("forecast", [])),
+        },
+    )
 
 
 def weather_api(request):
@@ -108,6 +118,8 @@ def user_dashboard_page(request):
         else None,
         "clusters": generate_area_clusters()[:8],
         "weather": weather,
+        "weather_today": weather.get("weather_today", weather.get("current", {})),
+        "daily_forecast": weather.get("daily_forecast", weather.get("forecast", [])),
     }
     return render(request, "dashboard.html", context)
 

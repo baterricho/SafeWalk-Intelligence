@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 from django.conf import settings
@@ -81,6 +81,87 @@ def get_weather_data(lat=DEFAULT_LAT, lon=DEFAULT_LON, location_name=DEFAULT_LOC
 
     cache.set(cache_key, weather, 900)
     return weather
+
+
+def calculate_weather_safety_index(weather_data):
+    current = weather_data.get("current", weather_data)
+    temp = round(current.get("temp", current.get("temperature", weather_data.get("temp", 0))) or 0)
+    rain_probability = round(current.get("precipitation", current.get("rain_probability", weather_data.get("precipitation", 0))) or 0)
+    humidity = round(current.get("humidity", weather_data.get("humidity", 0)) or 0)
+    wind_speed = round(current.get("wind", current.get("wind_speed", weather_data.get("wind", 0))) or 0)
+    main = current.get("main", weather_data.get("main", "Clear")) or "Clear"
+    condition = current.get("condition", weather_data.get("condition", main)) or main
+    weather_code = int(current.get("weather_code", weather_data.get("weather_code", 800)) or 800)
+    visibility = current.get("visibility", weather_data.get("visibility"))
+
+    is_thunderstorm = main == "Thunderstorm" or 200 <= weather_code <= 232 or "thunder" in condition.lower()
+    is_poor_visibility = (
+        main in {"Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash"}
+        or (visibility is not None and float(visibility) < 3000)
+    )
+
+    probability = 0
+    reasons = []
+    if rain_probability > 70:
+        probability += 35
+        reasons.append(f"Rain probability {rain_probability}%")
+    elif rain_probability > 40:
+        probability += 20
+        reasons.append(f"Rain probability {rain_probability}%")
+    if is_thunderstorm:
+        probability += 30
+        reasons.append(condition)
+    if temp >= 36:
+        probability += 35
+        reasons.append(f"High temperature {temp}C")
+    elif temp >= 33:
+        probability += 20
+        reasons.append(f"High temperature {temp}C")
+    if wind_speed > 35:
+        probability += 30
+        reasons.append(f"Strong wind {wind_speed} km/h")
+    elif wind_speed > 20:
+        probability += 15
+        reasons.append(f"Wind {wind_speed} km/h")
+    if humidity > 75:
+        probability += 10
+        reasons.append(f"Humidity {humidity}%")
+    if is_poor_visibility:
+        probability += 20
+        reasons.append("Poor visibility")
+
+    probability = max(0, min(100, probability))
+    if probability <= 20:
+        label = "Safe"
+        risk_key = "safe"
+        advice = "Good walking condition. Stay aware of traffic and nearby SafeWalk reports."
+    elif probability <= 40:
+        label = "Low Risk"
+        risk_key = "low"
+        advice = "Minor weather concern. Use normal walking precautions."
+    elif probability <= 60:
+        label = "Moderate Risk"
+        risk_key = "moderate"
+        advice = "Use caution while walking. Bring rain protection or water if needed."
+    elif probability <= 80:
+        label = "High Risk"
+        risk_key = "high"
+        advice = "Walking may be unsafe in exposed or poorly lit areas. Use visible main roads."
+    else:
+        label = "Critical Risk"
+        risk_key = "critical"
+        advice = "Avoid walking if possible. Wait for conditions to improve."
+
+    if not reasons:
+        reasons = ["Weather conditions are generally favorable."]
+
+    return {
+        "index_label": label,
+        "index_probability": probability,
+        "index_key": risk_key,
+        "advice": advice,
+        "risk_reasons": reasons,
+    }
 
 
 def calculate_weather_walking_risk(weather_data):
@@ -168,6 +249,7 @@ def calculate_weather_walking_risk(weather_data):
 
 
 def sample_weather_data(location_name=DEFAULT_LOCATION):
+    now = datetime.now()
     weather = {
         "source": "sample",
         "location": location_name or DEFAULT_LOCATION,
@@ -182,11 +264,14 @@ def sample_weather_data(location_name=DEFAULT_LOCATION):
             "icon": "bi-brightness-high",
             "icon_url": "https://openweathermap.org/img/wn/01d@4x.png",
             "day": "Friday",
+            "date": _format_display_date(now),
+            "date_short": _format_display_date(now, short=True),
             "updated": "Updated recently",
         },
         "hourly": SAMPLE_HOURLY,
         "forecast": SAMPLE_FORECAST,
     }
+    _enrich_weather_indexes(weather)
     risk = calculate_weather_walking_risk(weather)
     weather["alert"] = {
         "title": risk["title"],
@@ -230,15 +315,19 @@ def _build_weather_dashboard(current, forecast, location_name):
             "precipitation": current_precipitation,
             "humidity": round(main_data.get("humidity", 0)),
             "wind": round(wind_data.get("speed", 0) * 3.6),
+            "visibility": current.get("visibility"),
             "icon": _weather_icon(current_weather.get("main", "Clear"), current_weather.get("id", 800)),
             "icon_url": _openweather_icon_url(current_weather.get("icon"), size="4x"),
             "day": _weekday_from_timestamp(current.get("dt"), timezone_offset, long=True),
+            "date": _date_from_timestamp(current.get("dt"), timezone_offset),
+            "date_short": _date_from_timestamp(current.get("dt"), timezone_offset, short=True),
             "updated": _updated_time(current.get("dt"), timezone_offset),
         },
         "hourly": _hourly_forecast(forecast_items, timezone_offset),
         "forecast": _daily_forecast(forecast_items, timezone_offset),
     }
 
+    _enrich_weather_indexes(weather)
     risk = calculate_weather_walking_risk(weather)
     weather["alert"] = {
         "title": risk["title"],
@@ -284,16 +373,28 @@ def _daily_forecast(items, timezone_offset):
         min_temp = min((entry.get("main") or {}).get("temp_min", 0) for entry in day_items)
         representative = max(day_items, key=lambda entry: _forecast_pop(entry))
         weather = (representative.get("weather") or [{}])[0]
+        humidity_values = [(entry.get("main") or {}).get("humidity", 0) for entry in day_items]
+        wind_values = [(entry.get("wind") or {}).get("speed", 0) * 3.6 for entry in day_items]
         days.append(
             {
                 "weekday": _weekday_from_date_key(date_key),
+                "day": _weekday_from_date_key(date_key, long=True),
+                "date": _formatted_date_key(date_key),
+                "date_short": _formatted_date_key(date_key, short=True),
+                "date_key": date_key,
                 "main": weather.get("main", "Clear"),
+                "weather_code": weather.get("id", 800),
                 "condition": str(weather.get("description", "Weather")).title(),
                 "icon": _weather_icon(weather.get("main", "Clear"), weather.get("id", 800)),
                 "icon_url": _openweather_icon_url(weather.get("icon"), size="2x"),
                 "temp_max": round(max_temp),
                 "temp_min": round(min_temp),
+                "temperature": round(max_temp),
                 "precipitation": max(_forecast_pop(entry) for entry in day_items),
+                "rain_probability": max(_forecast_pop(entry) for entry in day_items),
+                "humidity": round(sum(humidity_values) / len(humidity_values)) if humidity_values else 0,
+                "wind": round(max(wind_values)) if wind_values else 0,
+                "wind_speed": round(max(wind_values)) if wind_values else 0,
             }
         )
 
@@ -341,11 +442,26 @@ def _weekday_from_timestamp(timestamp, timezone_offset, long=False):
     return _local_datetime(timestamp, timezone_offset).strftime(fmt)
 
 
-def _weekday_from_date_key(date_key):
+def _weekday_from_date_key(date_key, long=False):
     try:
-        return datetime.strptime(date_key, "%Y-%m-%d").strftime("%a")
+        return datetime.strptime(date_key, "%Y-%m-%d").strftime("%A" if long else "%a")
     except ValueError:
         return "Day"
+
+
+def _formatted_date_key(date_key, short=False):
+    try:
+        return _format_display_date(datetime.strptime(date_key, "%Y-%m-%d"), short=short)
+    except ValueError:
+        return date_key
+
+
+def _date_from_timestamp(timestamp, timezone_offset, short=False):
+    return _format_display_date(_local_datetime(timestamp, timezone_offset), short=short)
+
+
+def _format_display_date(value, short=False):
+    return f"{value.strftime('%b' if short else '%B')} {value.day}" if short else f"{value.strftime('%B')} {value.day}, {value.year}"
 
 
 def _date_key(timestamp, timezone_offset):
@@ -364,6 +480,7 @@ def _updated_time(timestamp, timezone_offset):
 
 
 def _with_legacy_weather_keys(weather):
+    _enrich_weather_indexes(weather)
     current = weather["current"]
     weather.update(
         {
@@ -375,4 +492,34 @@ def _with_legacy_weather_keys(weather):
             "advice": weather["walking_advice"]["advice"],
         }
     )
+    return weather
+
+
+def _enrich_weather_indexes(weather):
+    current = weather.get("current", {})
+    current_index = calculate_weather_safety_index({"current": current})
+    current.update(current_index)
+    current["rain_probability"] = current.get("precipitation", 0)
+    current["wind_speed"] = current.get("wind", 0)
+    weather["weather_today"] = current
+
+    enriched = []
+    base_date = datetime.now()
+    for index, day in enumerate(weather.get("forecast", [])):
+        if "date" not in day:
+            forecast_date = base_date + timedelta(days=index)
+            day["day"] = forecast_date.strftime("%A")
+            day["date"] = _format_display_date(forecast_date)
+            day["date_short"] = _format_display_date(forecast_date, short=True)
+        day["temperature"] = day.get("temperature", day.get("temp_max", 0))
+        day["high"] = day.get("temp_max", day.get("high", day.get("temperature", 0)))
+        day["low"] = day.get("temp_min", day.get("low", day.get("temperature", 0)))
+        day["rain_probability"] = day.get("rain_probability", day.get("precipitation", 0))
+        day["humidity"] = day.get("humidity", current.get("humidity", 0))
+        day["wind_speed"] = day.get("wind_speed", day.get("wind", current.get("wind", 0)))
+        day.update(calculate_weather_safety_index({"current": day}))
+        day["is_today"] = index == 0
+        enriched.append(day)
+    weather["daily_forecast"] = enriched
+    weather["forecast"] = enriched
     return weather

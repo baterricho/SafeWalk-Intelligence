@@ -1078,6 +1078,17 @@
     }
 
     function calculateWeatherWalkingRisk(weatherData) {
+        const index = calculateWeatherSafetyIndex(weatherData.current || weatherData);
+        return {
+            level: index.index_label,
+            type: index.type,
+            title: index.index_label === "Safe" ? "Safe Walking Weather" : `${index.index_label} Weather`,
+            message: (index.risk_reasons || []).join(", "),
+            advice: index.advice
+        };
+    }
+
+    function calculateWeatherSafetyIndex(weatherData) {
         const current = weatherData.current || weatherData;
         const temp = Number(current.temp || 0);
         const precipitation = Number(current.precipitation || 0);
@@ -1086,42 +1097,70 @@
         const main = current.main || "";
         const code = Number(current.weather_code || 800);
         const isStorm = main === "Thunderstorm" || (code >= 200 && code <= 232);
-        const isRain = main === "Rain" || main === "Drizzle" || (code >= 300 && code <= 531);
         const isLowVisibility = ["Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash"].includes(main);
-
-        if (temp >= 36 || (isStorm && precipitation >= 80) || wind >= 50) {
-            return {
-                level: "Critical",
-                type: "danger",
-                title: "Critical Weather Risk",
-                message: "Unsafe walking weather is likely in this area.",
-                advice: "Avoid walking if possible. Wait for conditions to improve and use only well-lit, sheltered routes for urgent trips."
-            };
+        let probability = 0;
+        const reasons = [];
+        if (precipitation > 70) {
+            probability += 35;
+            reasons.push(`Rain probability ${precipitation}%`);
+        } else if (precipitation > 40) {
+            probability += 20;
+            reasons.push(`Rain probability ${precipitation}%`);
         }
-        if (isStorm || (temp >= 33 && humidity >= 70)) {
-            return {
-                level: "High",
-                type: "danger",
-                title: isStorm ? "Thunderstorm Watch" : "Excessive Heat",
-                message: isStorm ? "Thunderstorms can create lightning, flooding, and poor visibility hazards." : "Severe heat is expected in this area.",
-                advice: "Avoid long walks during peak heat. Bring water, use shaded routes, and avoid flood-prone shortcuts if rain starts."
-            };
+        if (isStorm) {
+            probability += 30;
+            reasons.push(current.condition || "Thunderstorm condition");
         }
-        if (temp >= 33 || precipitation >= 70 || isRain || wind >= 30 || isLowVisibility || precipitation >= 45) {
-            return {
-                level: "Medium",
-                type: "caution",
-                title: "Weather Caution",
-                message: "Weather may make some walking routes less safe.",
-                advice: "Bring rain protection or water, choose shaded and well-drained routes, and avoid slippery sidewalks."
-            };
+        if (temp >= 36) {
+            probability += 35;
+            reasons.push(`High temperature ${temp}C`);
+        } else if (temp >= 33) {
+            probability += 20;
+            reasons.push(`High temperature ${temp}C`);
+        }
+        if (wind > 35) {
+            probability += 30;
+            reasons.push(`Strong wind ${wind} km/h`);
+        } else if (wind > 20) {
+            probability += 15;
+            reasons.push(`Wind ${wind} km/h`);
+        }
+        if (humidity > 75) {
+            probability += 10;
+            reasons.push(`Humidity ${humidity}%`);
+        }
+        if (isLowVisibility) {
+            probability += 20;
+            reasons.push("Poor visibility");
+        }
+        probability = clampNumber(probability, 0, 100);
+        let label = "Safe";
+        let key = "safe";
+        let advice = "Good walking condition. Stay aware of traffic and nearby SafeWalk reports.";
+        if (probability > 80) {
+            label = "Critical Risk";
+            key = "critical";
+            advice = "Avoid walking if possible. Wait for conditions to improve.";
+        } else if (probability > 60) {
+            label = "High Risk";
+            key = "high";
+            advice = "Walking may be unsafe in exposed or poorly lit areas. Use visible main roads.";
+        } else if (probability > 40) {
+            label = "Moderate Risk";
+            key = "moderate";
+            advice = "Use caution while walking. Bring rain protection or water if needed.";
+        } else if (probability > 20) {
+            label = "Low Risk";
+            key = "low";
+            advice = "Minor weather concern. Use normal walking precautions.";
         }
         return {
-            level: "Low",
-            type: "safe",
-            title: "Safe Walking Weather",
-            message: "Weather is generally safe for walking.",
-            advice: "Use your normal route, stay alert at crossings, and check active SafeWalk reports nearby."
+            index_label: label,
+            index_probability: probability,
+            index_key: key,
+            type: key === "critical" || key === "high" ? "danger" : key === "moderate" ? "caution" : "safe",
+            advice: advice,
+            risk_reasons: reasons.length ? reasons : ["Weather conditions are generally favorable."]
         };
     }
 
@@ -1144,6 +1183,12 @@
         const date = value ? new Date(value.includes("T") ? value : `${value}T00:00:00`) : new Date();
         if (Number.isNaN(date.getTime())) return "";
         return new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(date);
+    }
+
+    function formatDate(value, short) {
+        const date = value ? new Date(value.includes("T") ? value : `${value}T00:00:00`) : new Date();
+        if (Number.isNaN(date.getTime())) return "";
+        return new Intl.DateTimeFormat(undefined, short ? { month: "short", day: "numeric" } : { month: "long", day: "numeric", year: "numeric" }).format(date);
     }
 
     function formatHour(value) {
@@ -1275,6 +1320,8 @@
                 icon: condition.icon,
                 icon_url: "",
                 day: formatFullWeekday(current.time || (daily.time || [])[0]),
+                date: formatDate(current.time || (daily.time || [])[0]),
+                date_short: formatDate(current.time || (daily.time || [])[0], true),
                 updated: "Updated recently"
             },
             hourly: (hourly.time || []).slice(0, 8).map(function (time, index) {
@@ -1290,16 +1337,32 @@
                 const dayInfo = weatherCodeInfo((daily.weather_code || [])[index]);
                 return {
                     weekday: formatWeekday(time, `Day ${index + 1}`),
+                    day: formatFullWeekday(time),
+                    date: formatDate(time),
+                    date_short: formatDate(time, true),
                     condition: dayInfo.condition,
                     main: dayInfo.isStorm ? "Thunderstorm" : dayInfo.isRain ? "Rain" : "Clouds",
                     icon: dayInfo.icon,
                     icon_url: "",
                     temp_max: rounded((daily.temperature_2m_max || [])[index], 0),
                     temp_min: rounded((daily.temperature_2m_min || [])[index], 0),
-                    precipitation: rounded((daily.precipitation_probability_max || [])[index], 0)
+                    high: rounded((daily.temperature_2m_max || [])[index], 0),
+                    low: rounded((daily.temperature_2m_min || [])[index], 0),
+                    temperature: rounded((daily.temperature_2m_max || [])[index], 0),
+                    precipitation: rounded((daily.precipitation_probability_max || [])[index], 0),
+                    rain_probability: rounded((daily.precipitation_probability_max || [])[index], 0),
+                    humidity: rounded((hourly.relative_humidity_2m || [])[index], 0),
+                    wind: rounded((daily.wind_speed_10m_max || [])[index], 0),
+                    wind_speed: rounded((daily.wind_speed_10m_max || [])[index], 0)
                 };
             })
         };
+        weatherData.current = Object.assign(weatherData.current, calculateWeatherSafetyIndex(weatherData.current));
+        weatherData.forecast = weatherData.forecast.map(function (day, index) {
+            return Object.assign(day, calculateWeatherSafetyIndex(day), { is_today: index === 0 });
+        });
+        weatherData.weather_today = weatherData.current;
+        weatherData.daily_forecast = weatherData.forecast;
         const risk = calculateWeatherWalkingRisk(weatherData);
         weatherData.alert = {
             title: risk.title,
@@ -1368,25 +1431,32 @@
             }
 
             latestWeatherData = data;
+            const today = data.weather_today || current;
+            const todayIndex = today.index_label ? today : Object.assign({}, today, calculateWeatherSafetyIndex(today));
             setText("[data-weather-location-name]", data.location || defaultCoords.label);
             setText("[data-weather-current-temp]", rounded(current.temp, 33));
             setText("[data-weather-current-precipitation]", `${rounded(current.precipitation, 45)}%`);
             setText("[data-weather-current-humidity]", `${rounded(current.humidity, 72)}%`);
             setText("[data-weather-current-wind]", `${rounded(current.wind, 8)} km/h`);
             setText("[data-weather-current-day]", current.day || formatFullWeekday(new Date().toISOString()));
+            setText("[data-weather-today-date]", `${today.day || current.day || formatFullWeekday(new Date().toISOString())}, ${today.date || formatDate(new Date().toISOString())}`);
             setText("[data-weather-primary-condition]", current.condition || "Scattered thunderstorms");
+            setText("[data-weather-index-probability]", `${rounded(todayIndex.index_probability, 0)}%`);
 
             if (forecastList) {
-                forecastList.innerHTML = (data.forecast || []).slice(0, 8).map(function (day, index) {
+                forecastList.innerHTML = (data.daily_forecast || data.forecast || []).slice(0, 8).map(function (day, index) {
+                    const dayIndex = day.index_label ? day : Object.assign({}, day, calculateWeatherSafetyIndex(day));
                     const iconMarkup = day.icon_url
                         ? `<img class="forecast-weather-img" src="${escapeHtml(day.icon_url)}" alt="${escapeHtml(day.condition || "Forecast weather")}">`
                         : `<i class="bi ${escapeHtml(day.icon)}" aria-hidden="true"></i>`;
                     return `
                         <article class="forecast-day-card${index === 0 ? " active" : ""}">
                             <span>${escapeHtml(day.weekday)}</span>
+                            <small>${escapeHtml(day.date_short || "")}</small>
                             ${iconMarkup}
-                            <strong>${rounded(day.temp_max, 0)}&deg;</strong>
-                            <small>${rounded(day.temp_min, 0)}&deg;</small>
+                            <strong>${rounded(day.high || day.temp_max, 0)}&deg; / ${rounded(day.low || day.temp_min, 0)}&deg;</strong>
+                            <small class="weather-index-badge weather-index-${escapeHtml(dayIndex.index_key)}">${escapeHtml(dayIndex.index_label)}</small>
+                            <small>${rounded(dayIndex.index_probability, 0)}%</small>
                         </article>
                     `;
                 }).join("");
@@ -1398,13 +1468,13 @@
             if (alert) alert.className = `weather-alert ${type}`;
             if (advice) advice.className = `walking-advice-card ${type}`;
             const riskPill = panel.querySelector(".weather-risk-pill");
-            if (riskPill) riskPill.className = `weather-risk-pill ${type}`;
-            setText("[data-weather-alert-title]", alertData.title || "Walking Weather Advisory");
+            if (riskPill) riskPill.className = `weather-risk-pill weather-index-${todayIndex.index_key || "safe"} ${type}`;
+            setText("[data-weather-alert-title]", alertData.title || "Today’s Walking Safety Index");
             setText("[data-weather-alert-location]", alertData.location || data.location || defaultCoords.label);
             setText("[data-weather-alert-time]", alertData.time || current.updated || "Updated recently");
-            setText("[data-weather-alert-message]", alertData.message || "Check conditions before walking.");
-            setText("[data-weather-risk-level]", adviceData.risk_level || "Low");
-            setText("[data-weather-advice]", adviceData.advice || "Use normal walking precautions and check nearby SafeWalk reports.");
+            setText("[data-weather-alert-message]", alertData.message || (todayIndex.risk_reasons || []).join(", ") || "Check conditions before walking.");
+            setText("[data-weather-risk-level]", todayIndex.index_label || adviceData.risk_level || "Safe");
+            setText("[data-weather-advice]", todayIndex.advice || adviceData.advice || "Use normal walking precautions and check nearby SafeWalk reports.");
 
             renderHourlyGraph(chart, data.hourly || [], activeMetric);
             setStatus(`Showing forecast for ${data.location || defaultCoords.label}.`);
@@ -1510,9 +1580,23 @@
         }
     }
 
+    function initCookieNotice() {
+        const notice = document.querySelector("[data-cookie-notice]");
+        if (!notice || localStorage.getItem("safewalk_cookie_notice") === "accepted") return;
+        notice.hidden = false;
+        const accept = notice.querySelector("[data-cookie-accept]");
+        if (accept) {
+            accept.addEventListener("click", function () {
+                localStorage.setItem("safewalk_cookie_notice", "accepted");
+                notice.hidden = true;
+            });
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         setupReportValidation();
         setupAdminStatusUpdates();
         initLandingWeather();
+        initCookieNotice();
     });
 })();

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -66,12 +67,23 @@ def login_page(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
     form = SafeWalkLoginForm(request, data=request.POST or None)
+    next_url = request.GET.get("next") or request.POST.get("next") or "/dashboard/"
+    if not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = "/dashboard/"
     if request.method == "POST" and form.is_valid():
         user = form.get_user()
         if user:
             login(request, user)
-            return redirect("dashboard")
-    return render(request, "accounts/login.html", {"form": form})
+            if request.POST.get("remember_me"):
+                request.session.set_expiry(60 * 60 * 24 * 30)
+            else:
+                request.session.set_expiry(0)
+            return redirect(next_url)
+    return render(request, "accounts/login.html", {"form": form, "next": next_url})
 
 
 @login_required

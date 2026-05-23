@@ -33,7 +33,7 @@
         </div>
 
         <div class="landing-nav-actions">
-            {% if user.is_authenticated %}
+            {% if request.user.is_authenticated %}
                 <a class="btn btn-outline-secondary" href="{% url 'dashboard' %}">Dashboard</a>
                 <a class="btn btn-safewalk" href="{% url 'logout' %}">Logout</a>
             {% else %}
@@ -57,6 +57,14 @@
                 <a href="{% url 'report_list' %}" class="btn btn-light btn-lg border">View Safety Reports</a>
                 <a href="{% url 'my_routes' %}" class="btn btn-outline-primary btn-lg">Check Safe Routes</a>
             </div>
+
+            {% if request.user.is_authenticated %}
+                <div class="signed-in-landing-card">
+                    <strong>Welcome back, {{ request.user.username }}</strong>
+                    <span>You are signed in. Continue to your SafeWalk Dashboard.</span>
+                    <a href="{% url 'dashboard' %}">Go to Dashboard</a>
+                </div>
+            {% endif %}
 
             <div class="hero-stat-grid" aria-label="SafeWalk platform statistics">
                 <div><strong>1,248</strong><span>Active Reports</span></div>
@@ -87,10 +95,11 @@
             <div class="weather-dashboard-topline">
                 <div>
                     <span class="weather-dashboard-kicker">SafeWalk live forecast</span>
-                    <h3>Live Walking Forecast</h3>
+                    <h3>Today’s Walking Safety Index</h3>
+                    <p class="weather-today-date" data-weather-today-date>{{ weather_today.day|default:"Friday" }}, {{ weather_today.date|default:"May 23, 2026" }}</p>
                 </div>
-                <span class="weather-risk-pill">
-                    Walking Risk: <strong data-weather-risk-level>High</strong>
+                <span class="weather-risk-pill weather-index-{{ weather_today.index_key|default:'high' }}">
+                    Walking Safety Index: <strong data-weather-risk-level>{{ weather_today.index_label|default:"High Risk" }}</strong>
                 </span>
             </div>
 
@@ -120,7 +129,7 @@
                         <span data-weather-current-temp>33</span><sup>°C</sup>
                     </div>
                     <dl class="weather-meta">
-                        <div><dt>Precipitation:</dt><dd data-weather-current-precipitation>45%</dd></div>
+                        <div><dt>Rain Probability:</dt><dd data-weather-current-precipitation>45%</dd></div>
                         <div><dt>Humidity:</dt><dd data-weather-current-humidity>72%</dd></div>
                         <div><dt>Wind:</dt><dd data-weather-current-wind>8 km/h</dd></div>
                     </dl>
@@ -130,6 +139,9 @@
                     <h3>Weather</h3>
                     <span data-weather-current-day>Friday</span>
                     <strong data-weather-primary-condition>Scattered thunderstorms</strong>
+                    <p class="weather-index-probability mb-0">
+                        Index Probability: <strong data-weather-index-probability>{{ weather_today.index_probability|default:78 }}%</strong>
+                    </p>
                 </div>
             </div>
 
@@ -147,54 +159,20 @@
             </div>
 
             <div class="forecast-row" data-weather-list>
-                <article class="forecast-day-card active">
-                    <span>Fri</span>
-                    <i class="bi bi-cloud-lightning-rain" aria-hidden="true"></i>
-                    <strong>33°</strong>
-                    <small>28°</small>
-                </article>
-                <article class="forecast-day-card">
-                    <span>Sat</span>
-                    <i class="bi bi-cloud-lightning-rain" aria-hidden="true"></i>
-                    <strong>33°</strong>
-                    <small>27°</small>
-                </article>
-                <article class="forecast-day-card">
-                    <span>Sun</span>
-                    <i class="bi bi-cloud-rain-heavy" aria-hidden="true"></i>
-                    <strong>32°</strong>
-                    <small>27°</small>
-                </article>
-                <article class="forecast-day-card">
-                    <span>Mon</span>
-                    <i class="bi bi-cloud-rain" aria-hidden="true"></i>
-                    <strong>30°</strong>
-                    <small>27°</small>
-                </article>
-                <article class="forecast-day-card">
-                    <span>Tue</span>
-                    <i class="bi bi-cloud-drizzle" aria-hidden="true"></i>
-                    <strong>32°</strong>
-                    <small>27°</small>
-                </article>
-                <article class="forecast-day-card">
-                    <span>Wed</span>
-                    <i class="bi bi-cloud-drizzle" aria-hidden="true"></i>
-                    <strong>32°</strong>
-                    <small>27°</small>
-                </article>
-                <article class="forecast-day-card">
-                    <span>Thu</span>
-                    <i class="bi bi-cloud-sun" aria-hidden="true"></i>
-                    <strong>33°</strong>
-                    <small>27°</small>
-                </article>
-                <article class="forecast-day-card">
-                    <span>Fri</span>
-                    <i class="bi bi-brightness-high" aria-hidden="true"></i>
-                    <strong>32°</strong>
-                    <small>27°</small>
-                </article>
+                {% for day in daily_forecast|slice:":8" %}
+                    <article class="forecast-day-card {% if forloop.first %}active{% endif %}">
+                        <span>{{ day.weekday }}</span>
+                        <small>{{ day.date_short }}</small>
+                        {% if day.icon_url %}
+                            <img class="forecast-weather-img" src="{{ day.icon_url }}" alt="{{ day.condition }}">
+                        {% else %}
+                            <i class="bi {{ day.icon }}" aria-hidden="true"></i>
+                        {% endif %}
+                        <strong>{{ day.high|default:day.temp_max }}&deg; / {{ day.low|default:day.temp_min }}&deg;</strong>
+                        <small class="weather-index-badge weather-index-{{ day.index_key }}">{{ day.index_label }}</small>
+                        <small>{{ day.index_probability }}%</small>
+                    </article>
+                {% endfor %}
             </div>
 
             <div class="weather-alert danger">
@@ -208,7 +186,8 @@
 
             <div class="walking-advice-card danger">
                 <div class="walking-advice-header">
-                    <span>Walking Risk: <strong data-weather-risk-level>High</strong></span>
+                    <span>Walking Safety Index: <strong data-weather-risk-level>High Risk</strong></span>
+                    <span>Index Probability: <strong data-weather-index-probability>{{ weather_today.index_probability|default:78 }}%</strong></span>
                     <div class="walking-advice-icons" aria-hidden="true">
                         <i class="bi bi-thermometer-sun"></i>
                         <i class="bi bi-umbrella"></i>
@@ -216,7 +195,7 @@
                         <i class="bi bi-signpost-split"></i>
                     </div>
                 </div>
-                <p><strong>Advice:</strong> <span data-weather-advice>Avoid long walks during peak heat. Bring water, use shaded routes, and avoid flood-prone shortcuts if rain starts.</span></p>
+                <p><strong>SafeWalk Advice:</strong> <span data-weather-advice>Avoid long walks during peak heat. Bring water, use shaded routes, and avoid flood-prone shortcuts if rain starts.</span></p>
             </div>
 
             <p class="weather-live-status" data-weather-status>Loading weather forecast...</p>
