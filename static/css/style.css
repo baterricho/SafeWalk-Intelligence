@@ -4302,7 +4302,7 @@ button.route-option-card:hover,
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    min-height: 430px;
+    min-height: 380px;
     border-radius: 24px;
     overflow: hidden;
     background: #eaf7f7;
@@ -4316,7 +4316,7 @@ button.route-option-card:hover,
     height: 100%;
     min-height: 0;
     object-fit: cover;
-    object-position: center center;
+    object-position: 72% center;
     display: block;
     border-radius: 24px;
     filter: none !important;
