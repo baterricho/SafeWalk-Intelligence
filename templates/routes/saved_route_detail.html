@@ -31,6 +31,10 @@
                     <span>Usual walking time</span>
                     <strong>{{ route.usual_time|time:"g:i A" }}</strong>
                 </div>
+                <div>
+                    <span>Selected route</span>
+                    <strong>{{ route.get_selected_route_type_display }}</strong>
+                </div>
                 {% if route.route_distance_km %}
                     <div>
                         <span>Route distance</span>
@@ -82,6 +86,39 @@
                 data-end-label="{{ route.end_location }}"
                 data-status-id="saved-route-detail-status"
             ></div>
+            <div class="route-options-panel route-options-panel-static">
+                <h3 class="h6 mb-3">Route Comparison</h3>
+                <div class="route-option-grid">
+                    <div class="route-option-card {% if route.selected_route_type == 'shortcut_lane' %}selected{% endif %}">
+                        <span class="route-option-badge">Shorter</span>
+                        <strong>Shortcut Lane</strong>
+                        <small>Fastest route, may pass through smaller paths.</small>
+                        <span class="route-option-meta">
+                            {% if route.shortcut_distance_km or route.shortcut_duration_min %}
+                                {% if route.shortcut_distance_km %}{{ route.shortcut_distance_km }} km{% endif %}
+                                {% if route.shortcut_distance_km and route.shortcut_duration_min %} · {% endif %}
+                                {% if route.shortcut_duration_min %}{{ route.shortcut_duration_min }} min walk{% endif %}
+                            {% else %}
+                                Not available for this saved route.
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="route-option-card {% if route.selected_route_type == 'main_road' %}selected{% endif %}">
+                        <span class="route-option-badge safer">Safer / Main Road</span>
+                        <strong>Main Road</strong>
+                        <small>Follows more visible roads, usually easier to navigate.</small>
+                        <span class="route-option-meta">
+                            {% if route.main_road_distance_km or route.main_road_duration_min %}
+                                {% if route.main_road_distance_km %}{{ route.main_road_distance_km }} km{% endif %}
+                                {% if route.main_road_distance_km and route.main_road_duration_min %} · {% endif %}
+                                {% if route.main_road_duration_min %}{{ route.main_road_duration_min }} min walk{% endif %}
+                            {% else %}
+                                Not available for this saved route.
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
         </section>
     </div>
 </div>
@@ -122,10 +159,15 @@
 {% endblock %}
 {% block extra_js %}
 {{ route.route_geometry|json_script:"saved-route-geometry-data" }}
+{{ route.shortcut_geometry|json_script:"saved-route-shortcut-geometry-data" }}
+{{ route.main_road_geometry|json_script:"saved-route-main-road-geometry-data" }}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     window.SafeWalkRouteMap.init("saved-route-detail-map", {
-        geometryElementId: "saved-route-geometry-data"
+        geometryElementId: "saved-route-geometry-data",
+        shortcutGeometryElementId: "saved-route-shortcut-geometry-data",
+        mainRoadGeometryElementId: "saved-route-main-road-geometry-data",
+        selectedRouteType: "{{ route.selected_route_type|default:'main_road' }}"
     });
 });
 </script>

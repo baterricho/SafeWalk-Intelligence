@@ -31,14 +31,49 @@
                     </div>
                     <div id="savedRouteMap" class="route-form-map"></div>
                     <p id="savedRoutePinStatus" class="pin-status mt-3 mb-0">No route pinned yet.</p>
+                    <div id="routeOptionsPanel" class="route-options-panel d-none" aria-live="polite">
+                        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                            <div>
+                                <h3 class="h6 mb-1">Route Options</h3>
+                                <p class="small text-muted mb-0">Compare your fastest shortcut with a more visible main-road path.</p>
+                            </div>
+                            <div class="route-legend">
+                                <span><i class="shortcut-line"></i> Shortcut Lane</span>
+                                <span><i class="main-road-line"></i> Main Road</span>
+                            </div>
+                        </div>
+                        <div class="route-option-grid">
+                            <button type="button" class="route-option-card" data-route-option="shortcut_lane">
+                                <span class="route-option-badge">Shorter</span>
+                                <strong>Shortcut Lane</strong>
+                                <small>Fastest route, may pass through smaller paths.</small>
+                                <span class="route-option-meta" data-route-option-meta="shortcut_lane">Waiting for route...</span>
+                                <span class="route-option-action">Use Shortcut Lane</span>
+                            </button>
+                            <button type="button" class="route-option-card" data-route-option="main_road">
+                                <span class="route-option-badge safer">Safer / Main Road</span>
+                                <strong>Main Road</strong>
+                                <small>Follows more visible roads, usually easier to navigate.</small>
+                                <span class="route-option-meta" data-route-option-meta="main_road">Waiting for route...</span>
+                                <span class="route-option-action">Use Main Road</span>
+                            </button>
+                        </div>
+                    </div>
                     <p class="small text-muted mb-0">Map and place names use OpenStreetMap contributors.</p>
                     {{ form.start_latitude }}
                     {{ form.start_longitude }}
                     {{ form.end_latitude }}
                     {{ form.end_longitude }}
+                    {{ form.selected_route_type }}
                     {{ form.route_geometry }}
                     {{ form.route_distance_km }}
                     {{ form.route_duration_min }}
+                    {{ form.shortcut_geometry }}
+                    {{ form.shortcut_distance_km }}
+                    {{ form.shortcut_duration_min }}
+                    {{ form.main_road_geometry }}
+                    {{ form.main_road_distance_km }}
+                    {{ form.main_road_duration_min }}
                 </div>
 
                 <div class="mb-3">
@@ -61,7 +96,7 @@
                     {{ form.notes }}
                     {% for error in form.notes.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                 </div>
-                <button class="btn btn-safewalk">Save Route</button>
+                <button class="btn btn-safewalk">Save Selected Route</button>
             </form>
         </div>
     </div>
@@ -79,6 +114,9 @@
                     </div>
                     <div class="small text-muted mb-2">
                         Usual time: {{ route.usual_time|time:"g:i A" }}
+                    </div>
+                    <div class="small text-muted mb-2">
+                        Selected route: <strong>{{ route.get_selected_route_type_display }}</strong>
                     </div>
                     <div class="route-pin-status mb-2">
                         {% if route.start_latitude != None and route.start_longitude != None and route.end_latitude != None and route.end_longitude != None %}

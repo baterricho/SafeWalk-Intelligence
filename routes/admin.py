@@ -23,6 +23,7 @@ class SavedRouteAdmin(admin.ModelAdmin):
         "start_longitude",
         "end_latitude",
         "end_longitude",
+        "selected_route_type",
         "route_distance_km",
         "route_duration_min",
         "created_at",

@@ -38,6 +38,10 @@ class RouteNote(models.Model):
 
 
 class SavedRoute(models.Model):
+    class RouteType(models.TextChoices):
+        SHORTCUT_LANE = "shortcut_lane", "Shortcut Lane"
+        MAIN_ROAD = "main_road", "Main Road"
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_routes")
     route_name = models.CharField(max_length=120)
     start_location = models.CharField(max_length=160)
@@ -72,9 +76,16 @@ class SavedRoute(models.Model):
     )
     usual_time = models.TimeField()
     notes = models.TextField(max_length=1000, blank=True)
+    selected_route_type = models.CharField(max_length=32, choices=RouteType.choices, default=RouteType.MAIN_ROAD)
     route_geometry = models.JSONField(null=True, blank=True)
     route_distance_km = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     route_duration_min = models.PositiveIntegerField(null=True, blank=True)
+    shortcut_geometry = models.JSONField(null=True, blank=True)
+    shortcut_distance_km = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    shortcut_duration_min = models.PositiveIntegerField(null=True, blank=True)
+    main_road_geometry = models.JSONField(null=True, blank=True)
+    main_road_distance_km = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    main_road_duration_min = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

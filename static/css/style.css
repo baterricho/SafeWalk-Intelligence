@@ -414,6 +414,114 @@ body {
     color: var(--safewalk-green);
 }
 
+.route-options-panel {
+    background: #f8fafc;
+    border: 1px solid #dbe7e5;
+    border-radius: 10px;
+    margin: .9rem 0;
+    padding: .9rem;
+}
+
+.route-options-panel-static {
+    margin-bottom: 0;
+}
+
+.route-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    color: #475569;
+    font-size: .82rem;
+    font-weight: 800;
+}
+
+.route-legend i {
+    display: inline-block;
+    width: 32px;
+    margin-right: .3rem;
+    vertical-align: middle;
+}
+
+.shortcut-line {
+    border-top: 4px dashed #2563eb;
+}
+
+.main-road-line {
+    border-top: 4px solid #0f766e;
+}
+
+.route-option-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+}
+
+.route-option-card {
+    background: #fff;
+    border: 1px solid #d1d9e0;
+    border-radius: 10px;
+    color: #0f172a;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    padding: .85rem;
+    text-align: left;
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+button.route-option-card:hover,
+.route-option-card.selected {
+    border-color: #0f766e;
+    box-shadow: 0 12px 24px rgba(15, 118, 110, 0.12);
+    transform: translateY(-1px);
+}
+
+.route-option-card:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
+.route-option-card strong {
+    font-size: 1rem;
+}
+
+.route-option-card small {
+    color: #64748b;
+}
+
+.route-option-badge {
+    align-self: flex-start;
+    background: #dbeafe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: .72rem;
+    font-weight: 900;
+    padding: .2rem .55rem;
+    text-transform: uppercase;
+}
+
+.route-option-badge.safer {
+    background: #ccfbf1;
+    color: #0f766e;
+}
+
+.route-option-meta {
+    color: #0f3f3c;
+    font-weight: 900;
+}
+
+.route-option-action {
+    color: #0f766e;
+    font-size: .82rem;
+    font-weight: 900;
+}
+
+@media (max-width: 575.98px) {
+    .route-option-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .photo-preview-thumb {
     max-width: 180px;
     border-radius: 8px;

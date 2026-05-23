@@ -113,47 +113,127 @@
         return [parseFloat(point.lat), parseFloat(point.lng)];
     }
 
+    function routeDistanceKm(points) {
+        let total = 0;
+        for (let index = 0; index < points.length - 1; index += 1) {
+            const start = points[index];
+            const end = points[index + 1];
+            const radius = 6371;
+            const dLat = (end[0] - start[0]) * Math.PI / 180;
+            const dLng = (end[1] - start[1]) * Math.PI / 180;
+            const lat1 = start[0] * Math.PI / 180;
+            const lat2 = end[0] * Math.PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+            total += radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+        return total;
+    }
+
+    function walkingMinutes(distanceKm, apiDurationSeconds, useApiDuration) {
+        if (useApiDuration && apiDurationSeconds) return Math.max(1, Math.ceil(apiDurationSeconds / 60));
+        return Math.max(1, Math.ceil((distanceKm / 4.8) * 60));
+    }
+
+    async function fetchRouteByProfile(start, end, profile, routeType, label, useApiDuration) {
+        const url = `https://router.project-osrm.org/route/v1/${profile}/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`${profile} route failed`);
+        const data = await response.json();
+        const route = data.routes && data.routes[0];
+        const coordinates = route && route.geometry && route.geometry.coordinates;
+        if (!Array.isArray(coordinates) || coordinates.length < 2) throw new Error(`${profile} route unavailable`);
+        const points = coordinates.map(function (coordinate) {
+            return [coordinate[1], coordinate[0]];
+        });
+        const distanceKm = route.distance ? route.distance / 1000 : routeDistanceKm(points);
+        return {
+            type: routeType,
+            label: label,
+            points: points,
+            geojson: points,
+            distanceKm: distanceKm,
+            durationMin: walkingMinutes(distanceKm, route.duration, useApiDuration),
+            routed: true,
+            provider: `osrm-${profile}`
+        };
+    }
+
     async function fetchRoadRoute(startLatLng, endLatLng) {
         const start = toLeafletPoint(startLatLng);
         const end = toLeafletPoint(endLatLng);
-        const profiles = ["foot", "driving"];
-
-        for (const profile of profiles) {
-            const url = `https://router.project-osrm.org/route/v1/${profile}/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
+        try {
+            return await fetchRouteByProfile(start, end, "foot", "main_road", "Road-connected route", true);
+        } catch (error) {
             try {
-                const response = await fetch(url);
-                if (!response.ok) continue;
-                const data = await response.json();
-                const route = data.routes && data.routes[0];
-                const coordinates = route && route.geometry && route.geometry.coordinates;
-                if (Array.isArray(coordinates) && coordinates.length > 1) {
-                    const points = coordinates.map(function (coordinate) {
-                        return [coordinate[1], coordinate[0]];
-                    });
-                    return {
-                        points: points,
-                        geojson: points,
-                        distanceKm: route.distance / 1000,
-                        durationMin: route.duration / 60,
-                        routed: true,
-                        provider: `osrm-${profile}`
-                    };
-                }
-            } catch (error) {
-                // Try the next OSRM profile before falling back to a direct line.
+                return await fetchRouteByProfile(start, end, "driving", "main_road", "Road-connected route", false);
+            } catch (fallbackError) {
+                const points = [start, end];
+                const distanceKm = routeDistanceKm(points);
+                return {
+                    points: points,
+                    geojson: null,
+                    distanceKm: distanceKm,
+                    durationMin: walkingMinutes(distanceKm),
+                    routed: false,
+                    message: "Road route unavailable. Showing direct line temporarily. Try placing the pins closer to a road or walkway."
+                };
             }
         }
+    }
 
-        return {
+    async function fetchRouteOptions(startLatLng, endLatLng) {
+        const start = toLeafletPoint(startLatLng);
+        const end = toLeafletPoint(endLatLng);
+        const results = await Promise.allSettled([
+            fetchRouteByProfile(start, end, "foot", "shortcut_lane", "Shortcut Lane", true),
+            fetchRouteByProfile(start, end, "driving", "main_road", "Main Road", false)
+        ]);
+        const shortcut = results[0].status === "fulfilled" ? results[0].value : null;
+        const mainRoad = results[1].status === "fulfilled" ? results[1].value : null;
+        if (shortcut || mainRoad) {
+            return { shortcut: shortcut, mainRoad: mainRoad, routed: true };
+        }
+        const points = [start, end];
+        const distanceKm = routeDistanceKm(points);
+        const fallback = {
+            type: "main_road",
+            label: "Direct fallback",
             points: [start, end],
             geojson: null,
+            distanceKm: distanceKm,
+            durationMin: walkingMinutes(distanceKm),
             routed: false,
-            message: "Road route unavailable. Showing direct line temporarily. Try placing the pins closer to a road or walkway."
+            provider: "direct"
+        };
+        return { shortcut: null, mainRoad: fallback, routed: false };
+    }
+
+    function formatRouteMeta(route) {
+        if (!route) return "Not available for these points.";
+        return `${route.distanceKm.toFixed(1)} km · ${Math.round(route.durationMin)} min walk`;
+    }
+
+    function routeLineStyle(type, selected) {
+        if (type === "shortcut_lane") {
+            return {
+                color: "#2563eb",
+                weight: selected ? 6 : 5,
+                opacity: selected ? 0.95 : 0.85,
+                dashArray: "8, 8",
+                lineJoin: "round"
+            };
+        }
+        return {
+            color: "#0f766e",
+            weight: selected ? 7 : 6,
+            opacity: selected ? 0.98 : 0.9,
+            lineJoin: "round"
         };
     }
 
     window.SafeWalkRouting = {
-        fetchRoadRoute: fetchRoadRoute
+        fetchRoadRoute: fetchRoadRoute,
+        fetchRouteOptions: fetchRouteOptions
     };
 
     window.SafeWalkDashboard = {
@@ -434,33 +514,67 @@
                 }
             }
 
+            function savedOptionGeometry(elementId) {
+                const geometryNode = elementId ? document.getElementById(elementId) : null;
+                if (!geometryNode) return null;
+                try {
+                    const geometry = JSON.parse(geometryNode.textContent || "null");
+                    return Array.isArray(geometry) && geometry.length > 1 ? geometry : null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
             async function drawRoute() {
-                const geometry = savedGeometry();
-                let routeResult = null;
-                if (geometry) {
-                    routeResult = { points: geometry, routed: true };
-                    statusText("Saved road-connected route loaded.", true);
-                } else {
-                    statusText("Finding road-connected route...", false);
-                    routeResult = await fetchRoadRoute(start, end);
+                const selectedType = settings.selectedRouteType || "main_road";
+                const selectedGeometry = savedGeometry();
+                const shortcutGeometry = savedOptionGeometry(settings.shortcutGeometryElementId);
+                const mainRoadGeometry = savedOptionGeometry(settings.mainRoadGeometryElementId);
+                const lines = [];
+
+                if (shortcutGeometry) {
+                    lines.push({
+                        type: "shortcut_lane",
+                        points: shortcutGeometry,
+                        selected: selectedType === "shortcut_lane"
+                    });
+                }
+                if (mainRoadGeometry) {
+                    lines.push({
+                        type: "main_road",
+                        points: mainRoadGeometry,
+                        selected: selectedType === "main_road"
+                    });
+                }
+                if (!lines.length && selectedGeometry) {
+                    lines.push({
+                        type: selectedType,
+                        points: selectedGeometry,
+                        selected: true
+                    });
                 }
 
-                const routeLine = L.polyline(routeResult.points, {
-                    color: "#0f766e",
-                    weight: 5,
-                    opacity: 0.9,
-                    lineJoin: "round"
-                }).addTo(map);
-                map.fitBounds(routeLine.getBounds(), { padding: [35, 35], maxZoom: 17 });
-
-                if (routeResult.routed) {
-                    if (routeResult.distanceKm && routeResult.durationMin) {
+                if (lines.length) {
+                    let selectedLine = null;
+                    const bounds = [];
+                    lines.forEach(function (line) {
+                        const polyline = L.polyline(line.points, routeLineStyle(line.type, line.selected)).addTo(map);
+                        if (line.selected) selectedLine = polyline;
+                        bounds.push(polyline.getBounds());
+                    });
+                    const fitTarget = selectedLine ? selectedLine.getBounds() : bounds[0];
+                    map.fitBounds(fitTarget, { padding: [35, 35], maxZoom: 17 });
+                    statusText("Saved route loaded.", true);
+                } else {
+                    statusText("Finding road-connected route...", false);
+                    const routeResult = await fetchRoadRoute(start, end);
+                    const routeLine = L.polyline(routeResult.points, routeLineStyle("main_road", true)).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), { padding: [35, 35], maxZoom: 17 });
+                    if (routeResult.routed) {
                         statusText(`Estimated route: ${routeResult.distanceKm.toFixed(1)} km · ${Math.round(routeResult.durationMin)} min walk`, true);
                     } else {
-                        statusText("Route pinned successfully. Road-connected route found.", true);
+                        statusText(routeResult.message || "Road route unavailable. Showing direct line temporarily.", false);
                     }
-                } else {
-                    statusText(routeResult.message || "Road route unavailable. Showing direct line temporarily.", false);
                 }
             }
 
@@ -569,16 +683,30 @@
                 startLng: form.querySelector("[name='start_longitude']"),
                 endLat: form.querySelector("[name='end_latitude']"),
                 endLng: form.querySelector("[name='end_longitude']"),
+                selectedRouteType: form.querySelector("[name='selected_route_type']"),
                 routeGeometry: form.querySelector("[name='route_geometry']"),
                 routeDistanceKm: form.querySelector("[name='route_distance_km']"),
-                routeDurationMin: form.querySelector("[name='route_duration_min']")
+                routeDurationMin: form.querySelector("[name='route_duration_min']"),
+                shortcutGeometry: form.querySelector("[name='shortcut_geometry']"),
+                shortcutDistanceKm: form.querySelector("[name='shortcut_distance_km']"),
+                shortcutDurationMin: form.querySelector("[name='shortcut_duration_min']"),
+                mainRoadGeometry: form.querySelector("[name='main_road_geometry']"),
+                mainRoadDistanceKm: form.querySelector("[name='main_road_distance_km']"),
+                mainRoadDurationMin: form.querySelector("[name='main_road_duration_min']")
             };
+            const optionsPanel = document.getElementById(config.optionsPanelId || "routeOptionsPanel");
+            const optionButtons = optionsPanel ? Array.from(optionsPanel.querySelectorAll("[data-route-option]")) : [];
+            const optionMeta = optionsPanel ? {
+                shortcut_lane: optionsPanel.querySelector("[data-route-option-meta='shortcut_lane']"),
+                main_road: optionsPanel.querySelector("[data-route-option-meta='main_road']")
+            } : {};
             const map = L.map(config.mapId).setView([9.7786, 118.7353], 15);
             let selectedPinMode = "start";
             let startMarker = null;
             let endMarker = null;
-            let routeLine = null;
+            let routeLines = {};
             let routeRequestId = 0;
+            let currentRouteOptions = {};
 
             addBaseLayers(map);
 
@@ -600,18 +728,73 @@
             }
 
             function clearRouteMetadata() {
+                currentRouteOptions = {};
+                if (inputs.selectedRouteType) inputs.selectedRouteType.value = "";
                 if (inputs.routeGeometry) inputs.routeGeometry.value = "";
                 if (inputs.routeDistanceKm) inputs.routeDistanceKm.value = "";
                 if (inputs.routeDurationMin) inputs.routeDurationMin.value = "";
+                if (inputs.shortcutGeometry) inputs.shortcutGeometry.value = "";
+                if (inputs.shortcutDistanceKm) inputs.shortcutDistanceKm.value = "";
+                if (inputs.shortcutDurationMin) inputs.shortcutDurationMin.value = "";
+                if (inputs.mainRoadGeometry) inputs.mainRoadGeometry.value = "";
+                if (inputs.mainRoadDistanceKm) inputs.mainRoadDistanceKm.value = "";
+                if (inputs.mainRoadDurationMin) inputs.mainRoadDurationMin.value = "";
+                if (optionsPanel) optionsPanel.classList.add("d-none");
             }
 
-            function saveRouteMetadata(routeResult) {
-                if (routeResult.routed && routeResult.geojson) {
-                    if (inputs.routeGeometry) inputs.routeGeometry.value = JSON.stringify(routeResult.geojson);
-                    if (inputs.routeDistanceKm && routeResult.distanceKm) inputs.routeDistanceKm.value = routeResult.distanceKm.toFixed(2);
-                    if (inputs.routeDurationMin && routeResult.durationMin) inputs.routeDurationMin.value = String(Math.round(routeResult.durationMin));
+            function setOptionFields(prefix, option) {
+                const geometryInput = inputs[`${prefix}Geometry`];
+                const distanceInput = inputs[`${prefix}DistanceKm`];
+                const durationInput = inputs[`${prefix}DurationMin`];
+                if (geometryInput) geometryInput.value = option && option.geojson ? JSON.stringify(option.geojson) : "";
+                if (distanceInput) distanceInput.value = option && option.distanceKm ? option.distanceKm.toFixed(2) : "";
+                if (durationInput) durationInput.value = option && option.durationMin ? String(Math.round(option.durationMin)) : "";
+            }
+
+            function chooseRoute(type) {
+                const option = currentRouteOptions[type];
+                if (!option) return;
+                if (inputs.selectedRouteType) inputs.selectedRouteType.value = type;
+                if (inputs.routeGeometry) inputs.routeGeometry.value = option.geojson ? JSON.stringify(option.geojson) : "";
+                if (inputs.routeDistanceKm) inputs.routeDistanceKm.value = option.distanceKm ? option.distanceKm.toFixed(2) : "";
+                if (inputs.routeDurationMin) inputs.routeDurationMin.value = option.durationMin ? String(Math.round(option.durationMin)) : "";
+                Object.keys(routeLines).forEach(function (lineType) {
+                    routeLines[lineType].setStyle(routeLineStyle(lineType, lineType === type));
+                    if (lineType === type) routeLines[lineType].bringToFront();
+                });
+                optionButtons.forEach(function (button) {
+                    button.classList.toggle("selected", button.dataset.routeOption === type);
+                    button.disabled = !currentRouteOptions[button.dataset.routeOption];
+                });
+            }
+
+            function renderRouteOptions(routeOptions) {
+                currentRouteOptions = {
+                    shortcut_lane: routeOptions.shortcut,
+                    main_road: routeOptions.mainRoad
+                };
+                setOptionFields("shortcut", routeOptions.shortcut);
+                setOptionFields("mainRoad", routeOptions.mainRoad);
+                if (optionMeta.shortcut_lane) optionMeta.shortcut_lane.textContent = formatRouteMeta(routeOptions.shortcut);
+                if (optionMeta.main_road) optionMeta.main_road.textContent = formatRouteMeta(routeOptions.mainRoad);
+                if (optionsPanel) optionsPanel.classList.remove("d-none");
+                const defaultType = routeOptions.mainRoad ? "main_road" : "shortcut_lane";
+                chooseRoute(defaultType);
+                const foundCount = [routeOptions.shortcut, routeOptions.mainRoad].filter(function (option) {
+                    return option && option.routed;
+                }).length;
+                if (!routeOptions.routed) {
+                    status.textContent = "Could not find a road-connected route. Try placing pins closer to a road.";
+                    status.classList.remove("pinned");
+                } else if (foundCount === 2) {
+                    status.textContent = "Route options found. Choose which route you want to save.";
+                    status.classList.add("pinned");
+                } else if (foundCount === 1) {
+                    status.textContent = "Only one route option is available for these points.";
+                    status.classList.add("pinned");
                 } else {
-                    clearRouteMetadata();
+                    status.textContent = "Could not find a road-connected route. Try placing pins closer to a road.";
+                    status.classList.remove("pinned");
                 }
             }
 
@@ -631,34 +814,24 @@
             async function updateLine() {
                 const points = pointValues();
                 const currentRequestId = ++routeRequestId;
-                if (routeLine) {
-                    map.removeLayer(routeLine);
-                    routeLine = null;
-                }
+                Object.values(routeLines).forEach(function (line) { map.removeLayer(line); });
+                routeLines = {};
                 clearRouteMetadata();
                 if (points.start && points.end) {
-                    status.textContent = "Finding road-connected route...";
+                    status.textContent = "Finding shortcut lane and main road route...";
                     status.classList.remove("pinned");
-                    const routeResult = await fetchRoadRoute(points.start, points.end);
+                    const routeOptions = await fetchRouteOptions(points.start, points.end);
                     if (currentRequestId !== routeRequestId) return;
 
-                    routeLine = L.polyline(routeResult.points, {
-                        color: "#0f766e",
-                        weight: 5,
-                        opacity: 0.9,
-                        lineJoin: "round"
-                    }).addTo(map);
-                    map.fitBounds(routeLine.getBounds(), { padding: [35, 35], maxZoom: 17 });
-                    saveRouteMetadata(routeResult);
-                    if (routeResult.routed) {
-                        status.textContent = routeResult.distanceKm && routeResult.durationMin
-                            ? `Estimated route: ${routeResult.distanceKm.toFixed(1)} km · ${Math.round(routeResult.durationMin)} min walk`
-                            : "Route pinned successfully. Road-connected route found.";
-                        status.classList.add("pinned");
-                    } else {
-                        status.textContent = routeResult.message || "Road route unavailable. Showing direct line temporarily.";
-                        status.classList.remove("pinned");
+                    if (routeOptions.shortcut) {
+                        routeLines.shortcut_lane = L.polyline(routeOptions.shortcut.points, routeLineStyle("shortcut_lane", false)).addTo(map);
                     }
+                    if (routeOptions.mainRoad) {
+                        routeLines.main_road = L.polyline(routeOptions.mainRoad.points, routeLineStyle("main_road", true)).addTo(map);
+                    }
+                    const lines = Object.values(routeLines);
+                    if (lines.length) map.fitBounds(L.featureGroup(lines).getBounds(), { padding: [35, 35], maxZoom: 17 });
+                    renderRouteOptions(routeOptions);
                 } else {
                     setPartialStatus(points);
                 }
@@ -731,6 +904,11 @@
 
             startButton.addEventListener("click", function () { setMode("start"); });
             endButton.addEventListener("click", function () { setMode("end"); });
+            optionButtons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    chooseRoute(button.dataset.routeOption);
+                });
+            });
             map.on("click", function (event) {
                 setPoint(selectedPinMode, event.latlng.lat, event.latlng.lng);
             });
