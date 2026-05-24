@@ -16,5 +16,19 @@
       "src": "/(.*)",
       "dest": "safewalk_intelligence/wsgi.py"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/weather-notifications/",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/weather-notifications/",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/weather-notifications/",
+      "schedule": "0 10 * * *"
+    }
   ]
 }

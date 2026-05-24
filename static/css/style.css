@@ -4434,6 +4434,130 @@ button.route-option-card:hover,
     color: #991b1b !important;
 }
 
+.notification-dropdown {
+    min-width: 320px;
+}
+
+.notification-dropdown-item {
+    display: grid;
+    gap: .2rem;
+    white-space: normal;
+}
+
+.notification-dropdown-item span,
+.notification-list-item span {
+    color: #64748b;
+    font-size: .86rem;
+}
+
+.notification-dropdown-item.unread,
+.notification-list-item.unread {
+    background: #f0fdfa;
+}
+
+.notification-list {
+    overflow: hidden;
+}
+
+.notification-list-item {
+    border-bottom: 1px solid #e2e8f0;
+    color: #0f172a;
+    display: grid;
+    gap: .25rem;
+    padding: 1rem 1.25rem;
+    text-decoration: none;
+}
+
+.notification-list-item small {
+    color: #94a3b8;
+}
+
+.notification-toggle {
+    align-items: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: flex;
+    font-weight: 700;
+    gap: .65rem;
+    margin-bottom: .75rem;
+    padding: .85rem 1rem;
+}
+
+.weather-period-panel {
+    border: 1px solid #e2e8f0;
+}
+
+.weather-alert-badge {
+    background: #ecfeff;
+    color: #0e7490;
+}
+
+.weather-period-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.weather-period-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.weather-period-card h3 {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 850;
+    margin: 0;
+}
+
+.weather-period-card span {
+    color: #64748b;
+    font-size: .86rem;
+    font-weight: 700;
+}
+
+.weather-period-condition {
+    color: #0f766e;
+    display: block;
+    font-size: 1.25rem;
+    margin: .9rem 0;
+}
+
+.weather-period-card dl {
+    display: grid;
+    gap: .45rem;
+    margin: 0 0 .9rem;
+}
+
+.weather-period-card dl div {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.weather-period-card dt {
+    color: #64748b;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.weather-period-card dd {
+    color: #0f172a;
+    font-size: .88rem;
+    font-weight: 850;
+    margin: 0;
+    text-align: right;
+}
+
+.weather-period-card p {
+    color: #475569;
+    font-size: .9rem;
+    margin: 0;
+}
+
 @media (max-width: 992px) {
     .landing-v2 .hero-video-card,
     .hero-video-card {
@@ -4541,6 +4665,10 @@ button.route-option-card:hover,
     .walking-advice-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .weather-period-grid {
+        grid-template-columns: 1fr;
     }
 }
 

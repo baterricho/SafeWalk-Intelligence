@@ -46,6 +46,10 @@ LOGGING = {
 
 OPENWEATHER_API_KEY = config("OPENWEATHER_API_KEY", default=None)
 BLOB_READ_WRITE_TOKEN = config("BLOB_READ_WRITE_TOKEN", default="")
+VAPID_PUBLIC_KEY = config("VAPID_PUBLIC_KEY", default="")
+VAPID_PRIVATE_KEY = config("VAPID_PRIVATE_KEY", default="")
+VAPID_ADMIN_EMAIL = config("VAPID_ADMIN_EMAIL", default="admin@safewalk.local")
+CRON_SECRET = config("CRON_SECRET", default="")
 
 
 INSTALLED_APPS = [
@@ -69,6 +73,7 @@ INSTALLED_APPS = [
     "routes",
     "dashboard",
     "geocoding",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -97,6 +102,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "notifications.context_processors.notification_center",
             ],
         },
     },

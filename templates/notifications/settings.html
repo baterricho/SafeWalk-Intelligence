@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Notification Preferences | SafeWalk Intelligence{% endblock %}
+{% block content %}
+<div class="notification-settings-page">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <p class="dashboard-label">Notification Preferences</p>
+            <h1 class="dashboard-title">Safety Notifications</h1>
+            <p class="dashboard-subtitle">Choose which SafeWalk alerts can reach your browser or installed PWA.</p>
+        </div>
+        <button class="btn btn-safewalk" type="button" data-push-enable>Enable Safety Notifications</button>
+    </div>
+    <div class="alert alert-info" data-push-status>
+        For best phone notifications, install SafeWalk as an app and allow notifications.
+    </div>
+    <form method="post" class="section-panel p-4">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="notification-toggle"><input type="checkbox" name="weather_enabled" {% if preference.weather_enabled %}checked{% endif %}> Weather updates</label>
+                <label class="notification-toggle"><input type="checkbox" name="morning_weather" {% if preference.morning_weather %}checked{% endif %}> Morning weather alert</label>
+                <label class="notification-toggle"><input type="checkbox" name="afternoon_weather" {% if preference.afternoon_weather %}checked{% endif %}> Afternoon weather alert</label>
+                <label class="notification-toggle"><input type="checkbox" name="evening_weather" {% if preference.evening_weather %}checked{% endif %}> Evening weather alert</label>
+            </div>
+            <div class="col-md-6">
+                <label class="notification-toggle"><input type="checkbox" name="nearby_reports_enabled" {% if preference.nearby_reports_enabled %}checked{% endif %}> New nearby reports</label>
+                <label class="notification-toggle"><input type="checkbox" name="comments_enabled" {% if preference.comments_enabled %}checked{% endif %}> Comments on my reports and joined reports</label>
+                <label class="notification-toggle"><input type="checkbox" name="critical_only" {% if preference.critical_only %}checked{% endif %}> Critical alerts only</label>
+                <label class="notification-toggle"><input type="checkbox" {% if not preference.critical_only %}checked{% endif %} disabled> All safety alerts</label>
+            </div>
+        </div>
+        <button class="btn btn-safewalk mt-4" type="submit">Save Preferences</button>
+    </form>
+</div>
+{% endblock %}
