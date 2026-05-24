@@ -27,7 +27,9 @@
     </div>
 
     {% if report.photo %}
-        <img class="report-photo mt-3" src="{{ report.photo.url }}" alt="Photo evidence for {{ report.title }}">
+        <figure class="report-photo-frame mt-3">
+            <img class="report-photo" src="{{ report.photo.url }}" alt="Photo evidence for {{ report.title }}">
+        </figure>
     {% endif %}
 </article>
 
