@@ -12,3 +12,4 @@ psycopg[binary]>=3.1
 requests>=2.31
 whitenoise>=6.6.0
 vercel>=0.5.9,<0.6
+pywebpush>=2.0.3

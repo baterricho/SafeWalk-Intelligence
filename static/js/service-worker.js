@@ -78,3 +78,44 @@ self.addEventListener("fetch", (event) => {
         })
     );
 });
+
+self.addEventListener("push", function(event) {
+    let data = {};
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch (error) {
+        data = {};
+    }
+
+    const title = data.title || "SafeWalk Alert";
+    const options = {
+        body: data.body || "You have a new SafeWalk notification.",
+        icon: "/static/images/pwa/icon-192.png",
+        badge: "/static/images/pwa/icon-192.png",
+        tag: data.tag || "safewalk-alert",
+        data: {
+            url: data.url || "/dashboard/"
+        }
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
+
+self.addEventListener("notificationclick", function(event) {
+    event.notification.close();
+
+    const url = event.notification.data.url || "/dashboard/";
+
+    event.waitUntil(
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clientList) {
+            for (const client of clientList) {
+                if ("focus" in client && client.url.endsWith(url)) {
+                    return client.focus();
+                }
+            }
+            return clients.openWindow(url);
+        })
+    );
+});

@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import user_is_admin
+from notifications.services import notify_new_report, notify_report_comment, notify_report_update
 from .filters import SafetyReportFilter
 from .forms import SafetyReportForm
 from .models import ReportConfirmation, SafetyReport
@@ -74,10 +75,12 @@ class SafetyReportViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         report = serializer.save(user=self.request.user)
         refresh_report_intelligence(report)
+        notify_new_report(report)
 
     def perform_update(self, serializer):
         report = serializer.save()
         refresh_report_intelligence(report)
+        notify_report_update(report, self.request.user, "The report details were updated.")
 
     @action(detail=True, methods=["get"], url_path="intelligence")
     def intelligence(self, request, pk=None):
@@ -129,6 +132,8 @@ class SafetyReportViewSet(viewsets.ModelViewSet):
         refresh_report_intelligence(report)
         if created and confirmation.confirmation_type == ReportConfirmation.ConfirmationType.CONFIRMED:
             update_user_trust_score(report.user, "community_confirmed")
+        if confirmation.comment:
+            notify_report_comment(report, request.user, confirmation.comment)
         return Response(ReportConfirmationSerializer(confirmation).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
@@ -204,12 +209,14 @@ def report_detail_page(request, pk):
         if confirmation_type in valid_types and (
             confirmation_type != ReportConfirmation.ConfirmationType.COMMENT or comment
         ):
-            ReportConfirmation.objects.update_or_create(
+            confirmation, _ = ReportConfirmation.objects.update_or_create(
                 report=report,
                 user=request.user,
                 defaults={"confirmation_type": confirmation_type, "comment": comment[:500]},
             )
             refresh_report_intelligence(report)
+            if confirmation.comment:
+                notify_report_comment(report, request.user, confirmation.comment)
             messages.success(request, "Your community feedback was recorded.")
         return redirect("report_detail", pk=report.pk)
     confirmations = report.confirmations.select_related("user").order_by("-created_at")
@@ -239,6 +246,7 @@ def report_create_page(request):
         report.user = request.user
         report.save()
         refresh_report_intelligence(report)
+        notify_new_report(report)
         if duplicates:
             messages.warning(request, "Possible duplicate report found. You may support the existing report instead.")
         else:
@@ -260,6 +268,7 @@ def report_update_page(request, pk):
     if request.method == "POST" and form.is_valid():
         report = form.save()
         refresh_report_intelligence(report)
+        notify_report_update(report, request.user, "The report details were updated.")
         messages.success(request, "Safety report updated.")
         return redirect("report_detail", pk=report.pk)
     return render(request, "reports/report_form.html", {"form": form, "report": report, "mode": "Edit"})

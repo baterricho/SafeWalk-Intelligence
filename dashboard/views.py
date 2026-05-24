@@ -15,6 +15,8 @@ from reports.models import ReportStatusHistory, SafetyReport
 from reports.serializers import ReportStatusHistorySerializer, SafetyReportSerializer
 from reports.services import generate_area_clusters, refresh_report_intelligence, update_user_trust_score
 from reports.views import visible_reports_for_user
+from notifications.weather import build_period_weather_cards
+from notifications.services import notify_report_update
 from .serializers import DashboardSummarySerializer
 from .services import dashboard_summary
 from .weather_service import get_weather_data
@@ -120,6 +122,7 @@ def user_dashboard_page(request):
         "weather": weather,
         "weather_today": weather.get("weather_today", weather.get("current", {})),
         "daily_forecast": weather.get("daily_forecast", weather.get("forecast", [])),
+        "weather_period_cards": build_period_weather_cards(weather),
     }
     return render(request, "dashboard.html", context)
 
@@ -230,6 +233,7 @@ class AdminReportStatusAPIView(APIView):
             elif new_status == SafetyReport.Status.RESOLVED:
                 update_user_trust_score(report.user, "resolved_report")
             refresh_report_intelligence(report)
+            notify_report_update(report, request.user, f"Status changed to {report.get_status_display()}.")
 
         return Response(
             {
