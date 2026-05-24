@@ -227,6 +227,9 @@ CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+USE_X_FORWARDED_HOST = True
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https" if not DEBUG else "http"
+SOCIALACCOUNT_ADAPTER = "accounts.adapters.SafeWalkSocialAccountAdapter"
 
 # Local development override: if we are not on Vercel and it's local, avoid secure-only cookies
 # to prevent CSRF 403 on localhost.

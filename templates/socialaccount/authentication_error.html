@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Google Sign-In Failed | SafeWalk Intelligence{% endblock %}
+{% block content %}
+<section class="section-panel p-4 mx-auto" style="max-width: 720px;">
+    <p class="dashboard-label">Sign-In Error</p>
+    <h1 class="dashboard-title">Google sign-in could not be completed</h1>
+    <p class="dashboard-subtitle">
+        Please try signing in with Google again. If it still fails, use your email and password while the Google connection is checked.
+    </p>
+    <div class="d-flex gap-2 flex-wrap mt-4">
+        <a class="btn btn-safewalk" href="{% url 'login' %}">Back to Login</a>
+        <a class="btn btn-outline-teal" href="{% url 'signup' %}">Create Account</a>
+    </div>
+</section>
+{% endblock %}
