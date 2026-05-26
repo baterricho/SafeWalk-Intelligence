@@ -4345,7 +4345,7 @@ button.route-option-card:hover,
     object-position: center center;
     display: block;
     z-index: 1;
-    filter: none !important;
+    filter: contrast(1.08) saturate(1.08) brightness(1.02) !important;
     opacity: 1 !important;
 }
 
@@ -4354,8 +4354,8 @@ button.route-option-card:hover,
     inset: 0;
     z-index: 2;
     background:
-        linear-gradient(90deg, rgba(240, 253, 250, .76) 0%, rgba(240, 253, 250, .54) 32%, rgba(240, 253, 250, .14) 58%, rgba(240, 253, 250, 0) 100%),
-        linear-gradient(0deg, rgba(15, 118, 110, .04), rgba(255, 255, 255, 0));
+        linear-gradient(90deg, rgba(240, 253, 250, .48) 0%, rgba(240, 253, 250, .28) 31%, rgba(240, 253, 250, .06) 55%, rgba(240, 253, 250, 0) 100%),
+        linear-gradient(0deg, rgba(15, 118, 110, .02), rgba(255, 255, 255, 0));
     pointer-events: none;
 }
 
