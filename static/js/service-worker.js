@@ -1,4 +1,4 @@
-const CACHE_NAME = "safewalk-pwa-v6";
+const CACHE_NAME = "safewalk-pwa-v7";
 const OFFLINE_URL = "/offline/";
 
 const PRECACHE_URLS = [

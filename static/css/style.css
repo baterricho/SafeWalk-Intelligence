@@ -720,7 +720,7 @@ button.route-option-card:hover,
 }
 
 .hero-subtitle {
-    color: #475569;
+    color: #000000;
     font-size: clamp(1.05rem, 2vw, 1.28rem);
     line-height: 1.7;
     max-width: 660px;
@@ -1588,7 +1588,7 @@ button.route-option-card:hover,
 }
 
 .landing-v2 .hero-subtitle {
-    color: #25344b;
+    color: #000000;
     font-size: clamp(1rem, 1.55vw, 1.23rem);
     line-height: 1.62;
     margin-bottom: 1.55rem;
@@ -2669,7 +2669,7 @@ button.route-option-card:hover,
 }
 
 .landing-v2 .hero-subtitle {
-    color: #334155;
+    color: #000000;
     font-size: 1.12rem;
     line-height: 1.75;
     margin-bottom: 1.7rem;
