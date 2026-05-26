@@ -4298,55 +4298,98 @@ button.route-option-card:hover,
 
 .landing-v2 .hero-video-card,
 .hero-video-card {
-    width: 100%;
-    max-width: 820px;
-    margin-left: auto;
-    padding: 0.9rem;
-    border-radius: 28px;
-    background: linear-gradient(135deg, #ecfeff, #f8fafc);
-    border: 1px solid rgba(15, 118, 110, 0.15);
-    box-shadow: 0 24px 60px rgba(15, 118, 110, 0.16);
-    overflow: hidden;
-}
-
-.landing-v2 .hero-video-wrapper,
-.hero-video-wrapper {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 9;
-    min-height: 380px;
-    border-radius: 24px;
-    overflow: hidden;
+    max-width: 820px;
+    min-height: 560px;
+    margin-left: auto;
+    padding: 0;
+    border-radius: 32px;
     background: #eaf7f7;
+    border: 1px solid rgba(15, 118, 110, 0.18);
+    box-shadow: 0 28px 70px rgba(15, 118, 110, 0.18);
+    overflow: hidden;
 }
 
-.landing-v2 .hero-video,
-.hero-video {
+.landing-v2 .hero-background-video,
+.hero-background-video {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    min-height: 0;
-    object-fit: contain;
+    object-fit: cover;
     object-position: center center;
     display: block;
-    border-radius: 24px;
+    z-index: 1;
     filter: none !important;
     opacity: 1 !important;
-    background: #eaf7f7;
 }
 
-.landing-v2 .hero-video-wrapper::before,
-.landing-v2 .hero-video-wrapper::after,
-.hero-video-wrapper::before,
-.hero-video-wrapper::after {
-    display: none !important;
-    content: none !important;
+.hero-video-soft-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(236, 254, 255, 0.10),
+            rgba(255, 255, 255, 0.04)
+        );
+    pointer-events: none;
 }
 
-.hero-video-card video {
-    margin: 0;
-    padding: 0;
+.video-floating-card {
+    position: absolute;
+    z-index: 3;
+    max-width: 180px;
+    padding: 0.75rem 0.85rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.15);
+    color: #0f172a;
+    pointer-events: none;
+}
+
+.video-floating-card span {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #0f172a;
+}
+
+.video-floating-card strong {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    font-weight: 900;
+    color: #0f766e;
+}
+
+.video-floating-card small {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+    color: #475569;
+}
+
+.hero-video-card > .safety-score-card {
+    top: 6%;
+    left: 6%;
+}
+
+.hero-video-card > .weather-card {
+    top: 7%;
+    right: 6%;
+}
+
+.hero-video-card > .route-card {
+    bottom: 7%;
+    right: 7%;
 }
 
 .signed-in-landing-card {
@@ -4574,21 +4617,29 @@ button.route-option-card:hover,
     .landing-v2 .hero-video-card,
     .hero-video-card {
         max-width: 100%;
+        min-height: 430px;
         margin: 0 auto;
-    }
-
-    .landing-v2 .hero-video-wrapper,
-    .hero-video-wrapper {
-        aspect-ratio: 16 / 9;
-        min-height: 360px;
     }
 }
 
 @media (max-width: 576px) {
-    .landing-v2 .hero-video-wrapper,
-    .hero-video-wrapper {
-        aspect-ratio: 4 / 3;
-        min-height: 280px;
+    .landing-v2 .hero-video-card,
+    .hero-video-card {
+        min-height: 320px;
+        border-radius: 24px;
+    }
+
+    .hero-video-card > .weather-card {
+        display: none;
+    }
+
+    .video-floating-card {
+        max-width: 145px;
+        padding: 0.55rem 0.65rem;
+    }
+
+    .video-floating-card small {
+        display: none;
     }
 
     .cookie-notice {

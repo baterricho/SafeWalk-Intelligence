@@ -70,11 +70,29 @@
         </div>
 
         <div class="hero-video-card">
-            <div class="hero-video-wrapper">
-                <video autoplay muted loop playsinline preload="metadata" class="hero-video">
-                    <source src="{% static 'videos/safewalk-walking-animation.original.mp4' %}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+            <video autoplay muted loop playsinline preload="metadata" class="hero-background-video">
+                <source src="{% static 'videos/safewalk-walking-animation.mp4' %}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+
+            <div class="hero-video-soft-overlay"></div>
+
+            <div class="video-floating-card safety-score-card">
+                <span>Safety Score</span>
+                <strong>72 / 100</strong>
+                <small>Moderately Safe</small>
+            </div>
+
+            <div class="video-floating-card weather-card">
+                <span>Weather Risk</span>
+                <strong>Medium</strong>
+                <small>Light rain detected</small>
+            </div>
+
+            <div class="video-floating-card route-card">
+                <span>Safer Route Found</span>
+                <strong>11 min walk</strong>
+                <small>Avoids 2 high-risk areas</small>
             </div>
         </div>
     </section>
