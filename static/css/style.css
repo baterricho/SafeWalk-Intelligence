@@ -4324,6 +4324,9 @@ button.route-option-card:hover,
     background: #eaf7f7;
     grid-template-columns: minmax(0, 1fr);
     isolation: isolate;
+    max-width: none;
+    min-height: min(860px, calc(100vh - 72px));
+    width: 100%;
 }
 
 .landing-v2 .hero-content {
@@ -4351,8 +4354,8 @@ button.route-option-card:hover,
     inset: 0;
     z-index: 2;
     background:
-        linear-gradient(90deg, rgba(240, 253, 250, .94) 0%, rgba(240, 253, 250, .82) 34%, rgba(240, 253, 250, .18) 62%, rgba(240, 253, 250, .04) 100%),
-        linear-gradient(0deg, rgba(15, 118, 110, .08), rgba(255, 255, 255, .02));
+        linear-gradient(90deg, rgba(240, 253, 250, .76) 0%, rgba(240, 253, 250, .54) 32%, rgba(240, 253, 250, .14) 58%, rgba(240, 253, 250, 0) 100%),
+        linear-gradient(0deg, rgba(15, 118, 110, .04), rgba(255, 255, 255, 0));
     pointer-events: none;
 }
 
