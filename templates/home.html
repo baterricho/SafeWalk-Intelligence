@@ -24,6 +24,7 @@
             <a href="{% url 'my_routes' %}">Safe Routes</a>
             <a href="#weather">Weather</a>
             <a href="#features">About</a>
+            <a href="#download">Download</a>
             <a href="#contact">Contact</a>
         </div>
 
@@ -295,6 +296,34 @@
             <article class="step-card"><span>2</span><h3>Describe the safety issue</h3><p>Add category, risk, lighting, crowd level, and details.</p></article>
             <article class="step-card"><span>3</span><h3>Upload optional photo evidence</h3><p>Help admins and the community verify faster.</p></article>
             <article class="step-card"><span>4</span><h3>Community shares updates</h3><p>Comments and feedback help keep report information useful for everyone.</p></article>
+        </div>
+    </section>
+
+    <section class="app-download-section" id="download">
+        <div class="app-download-copy">
+            <span class="section-pill">Download SafeWalk</span>
+            <h2>Install SafeWalk Intelligence on your device.</h2>
+            <p>Use the QR image for quick sharing, or download the Android APK installer from the project release.</p>
+            <div class="app-download-actions">
+                <a
+                    class="btn btn-safewalk btn-lg"
+                    href="https://github.com/baterricho/SafeWalk-Intelligence/releases/latest/download/SafeWalk-Intelligence.apk"
+                    download
+                >
+                    Download APK
+                </a>
+                <a
+                    class="btn btn-outline-primary btn-lg"
+                    href="{% static 'images/safewalk-app-qr.png' %}"
+                    download="safewalk-app-qr.png"
+                >
+                    Download QR Code
+                </a>
+            </div>
+        </div>
+        <div class="app-download-qr-card">
+            <img src="{% static 'images/safewalk-app-qr.png' %}" alt="SafeWalk Intelligence app QR code" loading="lazy" decoding="async">
+            <a href="{% static 'images/safewalk-app-qr.png' %}" download="safewalk-app-qr.png">Save QR image</a>
         </div>
     </section>
 
