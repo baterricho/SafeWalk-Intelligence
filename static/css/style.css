@@ -5470,3 +5470,122 @@ button.route-option-card:hover,
     }
 }
 
+/* Restore the original framed landing video placement. */
+.landing-v2 .hero-section {
+    align-items: stretch;
+    background: linear-gradient(135deg, #ecfeff 0%, #f8fafc 55%, #eff6ff 100%);
+    border: 1px solid rgba(15, 118, 110, .16);
+    border-radius: 24px;
+    display: grid;
+    gap: 3rem;
+    grid-template-columns: .9fr 1.1fr;
+    isolation: isolate;
+    margin: 0 auto;
+    max-width: 1440px;
+    min-height: calc(100vh - 96px);
+    overflow: hidden;
+    padding: 3rem;
+    width: auto;
+}
+
+.landing-v2 .hero-content {
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: center;
+    max-width: 620px;
+    position: relative;
+    z-index: 2;
+}
+
+.landing-v2 .hero-video-card,
+.hero-video-card {
+    align-items: center;
+    align-self: stretch;
+    background: #eaf7f7;
+    border: 1px solid rgba(15, 118, 110, .15);
+    border-radius: 26px;
+    box-shadow: 0 28px 70px rgba(15, 118, 110, .16);
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    inset: auto;
+    justify-self: end;
+    margin: 0;
+    max-width: none;
+    min-height: clamp(520px, calc(100vh - 190px), 680px);
+    overflow: hidden;
+    padding: 1rem;
+    position: relative;
+    width: 100%;
+    z-index: 1;
+}
+
+.landing-v2 .hero-background-video,
+.hero-background-video {
+    background: #dfe7e7;
+    display: block;
+    filter: none !important;
+    height: auto;
+    max-height: min(58vh, 460px);
+    object-fit: contain;
+    object-position: center center;
+    opacity: 1 !important;
+    position: relative;
+    width: 100%;
+    z-index: 1;
+}
+
+.hero-video-soft-overlay {
+    display: none;
+}
+
+@media (max-width: 1100px) {
+    .landing-v2 .hero-section {
+        grid-template-columns: 1fr;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+    }
+
+    .landing-v2 .hero-content {
+        align-items: center;
+        grid-column: 1;
+        grid-row: 1;
+        margin: 0 auto;
+        max-width: 760px;
+    }
+
+    .landing-v2 .hero-video-card,
+    .hero-video-card {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: center;
+        max-width: 850px;
+        min-height: 430px;
+    }
+}
+
+@media (max-width: 768px) {
+    .landing-v2 .hero-section {
+        border-radius: 0;
+        padding: 2rem 1rem;
+    }
+
+    .landing-v2 .hero-video-card,
+    .hero-video-card {
+        min-height: 340px;
+        padding: .75rem;
+    }
+
+    .landing-v2 .hero-background-video,
+    .hero-background-video {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .landing-v2 .hero-video-card,
+    .hero-video-card {
+        min-height: 280px;
+    }
+}
+
