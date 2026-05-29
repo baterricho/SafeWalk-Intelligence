@@ -94,3 +94,4 @@ class SavedRoute(models.Model):
 
     def __str__(self):
         return f"{self.route_name}: {self.start_location} to {self.end_location}"
+       
