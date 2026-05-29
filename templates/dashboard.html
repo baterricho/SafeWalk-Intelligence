@@ -165,18 +165,28 @@
                         {% if weather %}
                         <div class="d-flex align-items-center gap-3 mt-3">
                             <div class="weather-icon">
-                                <img src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="{{ weather.description }}" width="50">
+                                <img id="weather-snapshot-icon" src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="{{ weather.description }}" width="50">
                             </div>
                             <div>
-                                <strong class="d-block fs-5">{{ weather.description }} ({{ weather.temp }}°C)</strong>
+                                <strong class="d-block fs-5" id="weather-snapshot-desc">{{ weather.description }} ({{ weather.temp }}°C)</strong>
                                 <span class="text-muted">Walking Risk: 
-                                    <span class="fw-bold {% if weather.risk_level == 'Low' %}text-success{% elif weather.risk_level == 'Medium' %}text-warning{% else %}text-danger{% endif %}">
+                                    <span id="weather-snapshot-risk" class="fw-bold {% if weather.risk_level == 'Low' %}text-success{% elif weather.risk_level == 'Medium' %}text-warning{% else %}text-danger{% endif %}">
                                         {{ weather.risk_level }}
                                     </span>
                                 </span>
                             </div>
                         </div>
-                        <p class="mt-3 mb-0 small text-muted">Advice: {{ weather.advice }}</p>
+                        <div class="weather-snapshot-details mt-3">
+                            <div class="row g-2 small">
+                                <div class="col-6"><i class="bi bi-droplet text-primary"></i> Rain: <strong id="weather-snapshot-rain">{{ weather.current.precipitation|default:"0" }}%</strong></div>
+                                <div class="col-6"><i class="bi bi-moisture text-info"></i> Humidity: <strong id="weather-snapshot-humidity">{{ weather.current.humidity|default:"0" }}%</strong></div>
+                                <div class="col-6"><i class="bi bi-wind text-secondary"></i> Wind: <strong id="weather-snapshot-wind">{{ weather.current.wind|default:"0" }} km/h</strong></div>
+                                <div class="col-6"><i class="bi bi-thermometer-sun text-warning"></i> Feels: <strong id="weather-snapshot-feels">{{ weather.feels_like|default:"0" }}°C</strong></div>
+                                <div class="col-6"><i class="bi bi-sun text-danger"></i> UV: <strong id="weather-snapshot-uv">{{ weather.uv_index|default:"0" }}</strong></div>
+                                <div class="col-6"><i class="bi bi-eye text-success"></i> Visibility: <strong id="weather-snapshot-vis">{{ weather.visibility|default:"10" }} km</strong></div>
+                            </div>
+                        </div>
+                        <p class="mt-2 mb-0 small text-muted" id="weather-snapshot-advice">Advice: {{ weather.advice }}</p>
                         {% else %}
                         <div class="text-center py-4">
                             <i class="bi bi-cloud-slash fs-2 text-muted"></i>
@@ -194,36 +204,79 @@
             </div>
 
             <script>
-                document.getElementById('update-weather-btn').addEventListener('click', function() {
-                    const btn = this;
-                    const originalIcon = btn.innerHTML;
-                    
-                    if (!navigator.geolocation) {
-                        alert("Geolocation is not supported by your browser.");
-                        return;
-                    }
+(function() {
+    var weatherBtn = document.getElementById('update-weather-btn');
+    var weatherContent = document.getElementById('weather-content');
 
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+    function updateWeatherSnapshot(lat, lng) {
+        if (weatherBtn) {
+            weatherBtn.disabled = true;
+            weatherBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+        }
+        fetch('/api/weather/?lat=' + lat + '&lon=' + lng)
+            .then(function(r) { return r.json(); })
+            .then(function(w) {
+                var current = w.current || w;
+                var descEl = document.getElementById('weather-snapshot-desc');
+                var riskEl = document.getElementById('weather-snapshot-risk');
+                var rainEl = document.getElementById('weather-snapshot-rain');
+                var humidEl = document.getElementById('weather-snapshot-humidity');
+                var windEl = document.getElementById('weather-snapshot-wind');
+                var feelsEl = document.getElementById('weather-snapshot-feels');
+                var uvEl = document.getElementById('weather-snapshot-uv');
+                var visEl = document.getElementById('weather-snapshot-vis');
+                var adviceEl = document.getElementById('weather-snapshot-advice');
+                if (descEl) descEl.textContent = (current.condition || w.description || 'Weather') + ' (' + Math.round(current.temp || w.temp || 0) + '°C)';
+                if (riskEl) {
+                    riskEl.textContent = w.risk_level || 'Low';
+                    riskEl.className = 'fw-bold ' + (w.risk_level === 'Low' ? 'text-success' : w.risk_level === 'Medium' ? 'text-warning' : 'text-danger');
+                }
+                if (rainEl) rainEl.textContent = Math.round(current.precipitation || 0) + '%';
+                if (humidEl) humidEl.textContent = Math.round(current.humidity || 0) + '%';
+                if (windEl) windEl.textContent = Math.round(current.wind || 0) + ' km/h';
+                if (feelsEl) feelsEl.textContent = Math.round(current.feels_like || 0) + '°C';
+                if (uvEl) uvEl.textContent = Math.round(current.uv_index || 0);
+                if (visEl) visEl.textContent = (current.visibility || 10) + ' km';
+                if (adviceEl) adviceEl.textContent = 'Advice: ' + (w.advice || 'Use normal walking precautions.');
+            })
+            .catch(function() {})
+            .finally(function() {
+                if (weatherBtn) {
+                    weatherBtn.disabled = false;
+                    weatherBtn.innerHTML = '<i class="bi bi-geo-fill"></i>';
+                }
+            });
+    }
 
-                    navigator.geolocation.getCurrentPosition(
-                        function(position) {
-                            const lat = position.coords.latitude;
-                            const lng = position.coords.longitude;
-                            // Reload the page with the new coordinates in the query string
-                            const url = new URL(window.location.href);
-                            url.searchParams.set('lat', lat);
-                            url.searchParams.set('lng', lng);
-                            window.location.href = url.toString();
-                        },
-                        function(error) {
-                            btn.disabled = false;
-                            btn.innerHTML = originalIcon;
-                            alert("Could not get your location. Please check your browser permissions.");
-                        },
-                        { enableHighAccuracy: true, timeout: 5000 }
-                    );
-                });
+    function autoDetectAndUpdate() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            function(pos) { updateWeatherSnapshot(pos.coords.latitude, pos.coords.longitude); },
+            function() { /* silently use server default */ },
+            { enableHighAccuracy: false, timeout: 8000 }
+        );
+    }
+
+    if (weatherBtn) {
+        weatherBtn.addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                function(pos) { updateWeatherSnapshot(pos.coords.latitude, pos.coords.longitude); },
+                function() { alert('Could not get your location. Please check your browser permissions.'); },
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        });
+    }
+
+    // Auto-detect location on load
+    autoDetectAndUpdate();
+
+    // Auto-refresh every 10 minutes
+    setInterval(autoDetectAndUpdate, 600000);
+})();
             </script>
             <div class="col-lg-4">
                 <div class="insight-card community-activity-card">

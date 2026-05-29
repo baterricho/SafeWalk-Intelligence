@@ -5589,4 +5589,41 @@ button.route-option-card:hover,
     }
 }
 
+/* ── LIVE Badge ── */
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-right: 8px;
+    opacity: 0.5;
+    transition: opacity 0.4s;
+}
+.live-badge.active {
+    opacity: 1;
+}
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    display: inline-block;
+    animation: live-pulse 1.5s ease-in-out infinite;
+}
+@keyframes live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.75); }
+}
+
+.weather-snapshot-details .row > div {
+    padding: 4px 0;
+}
+
 

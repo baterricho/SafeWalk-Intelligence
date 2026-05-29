@@ -1297,6 +1297,36 @@
         `;
     }
 
+    function formatSunTime(isoString) {
+        if (!isoString) return '';
+        var d = new Date(isoString);
+        if (isNaN(d.getTime())) return '';
+        return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(d);
+    }
+
+    function uvLabel(index) {
+        var uv = Math.round(Number(index) || 0);
+        if (uv <= 2) return 'Low';
+        if (uv <= 5) return 'Moderate';
+        if (uv <= 7) return 'High';
+        if (uv <= 10) return 'Very High';
+        return 'Extreme';
+    }
+
+    function reverseGeocode(lat, lng) {
+        return fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&zoom=14')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data || !data.address) return null;
+                var addr = data.address;
+                var parts = [];
+                if (addr.suburb || addr.neighbourhood || addr.village) parts.push(addr.suburb || addr.neighbourhood || addr.village);
+                if (addr.city || addr.town || addr.municipality) parts.push(addr.city || addr.town || addr.municipality);
+                return parts.join(', ') || data.display_name || null;
+            })
+            .catch(function() { return null; });
+    }
+
     function normalizeOpenMeteoData(data, locationLabel) {
         const current = data.current || {};
         const daily = data.daily || {};
@@ -1313,6 +1343,13 @@
                 precipitation: clampNumber(rounded((daily.precipitation_probability_max || [])[0], 45), 0, 100),
                 humidity: clampNumber(rounded(current.relative_humidity_2m, rounded((hourly.relative_humidity_2m || [])[0], 72)), 0, 100),
                 wind: rounded(current.wind_speed_10m, rounded((daily.wind_speed_10m_max || [])[0], 8)),
+                feels_like: rounded(current.apparent_temperature, rounded((daily.apparent_temperature_max || [])[0], 33)),
+                uv_index: rounded((hourly.uv_index || [])[0], 0),
+                pressure: rounded(current.surface_pressure, 1013),
+                visibility: rounded((hourly.visibility || [])[0], 10000) / 1000,
+                dew_point: rounded((hourly.dew_point_2m || [])[0], 25),
+                sunrise: formatSunTime((daily.sunrise || [])[0]),
+                sunset: formatSunTime((daily.sunset || [])[0]),
                 icon: condition.icon,
                 icon_url: "",
                 day: formatFullWeekday(current.time || (daily.time || [])[0]),
@@ -1476,6 +1513,19 @@
             setText("[data-weather-risk-level]", todayIndex.index_label || adviceData.risk_level || "Safe");
             setText("[data-weather-advice]", todayIndex.advice || adviceData.advice || "Use normal walking precautions and check nearby SafeWalk reports.");
 
+            setText('[data-weather-current-feels-like]', rounded(current.feels_like, 33) + '°C');
+            setText('[data-weather-current-uv-index]', rounded(current.uv_index, 0) + ' (' + uvLabel(current.uv_index) + ')');
+            setText('[data-weather-current-pressure]', rounded(current.pressure, 1013) + ' hPa');
+            setText('[data-weather-current-visibility]', (Math.round((current.visibility || 10) * 10) / 10) + ' km');
+            setText('[data-weather-current-dew-point]', rounded(current.dew_point, 25) + '°C');
+            setText('[data-weather-current-sunrise]', current.sunrise || '—');
+            setText('[data-weather-current-sunset]', current.sunset || '—');
+
+            var liveBadge = panel.querySelector('[data-weather-live-badge]');
+            if (liveBadge) {
+                liveBadge.classList.add('active');
+            }
+
             renderHourlyGraph(chart, data.hourly || [], activeMetric);
             setStatus(`Showing forecast for ${data.location || defaultCoords.label}.`);
         }
@@ -1484,9 +1534,9 @@
             const params = new URLSearchParams({
                 latitude: coords.lat,
                 longitude: coords.lng,
-                current: "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
-                hourly: "temperature_2m,precipitation_probability,wind_speed_10m,relative_humidity_2m",
-                daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max",
+                current: "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,apparent_temperature,surface_pressure",
+                hourly: "temperature_2m,precipitation_probability,wind_speed_10m,relative_humidity_2m,uv_index,visibility,dew_point_2m",
+                daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,apparent_temperature_max,sunrise,sunset",
                 timezone: "auto",
                 forecast_days: "7"
             });
@@ -1569,15 +1619,59 @@
             });
         }
 
-        if (initialDataNode) {
-            try {
-                renderWeatherDashboard(JSON.parse(initialDataNode.textContent || "{}"));
-            } catch (error) {
-                refreshForecast();
+        // Auto-detect user location on page load
+        function autoDetectLocation() {
+            if (!navigator.geolocation) {
+                // No geolocation support, use server data or default
+                if (initialDataNode) {
+                    try {
+                        renderWeatherDashboard(JSON.parse(initialDataNode.textContent || '{}'));
+                    } catch (e) {
+                        refreshForecast();
+                    }
+                } else {
+                    refreshForecast();
+                }
+                return;
             }
-        } else {
-            refreshForecast();
+
+            // Render server data first for instant display
+            if (initialDataNode) {
+                try {
+                    renderWeatherDashboard(JSON.parse(initialDataNode.textContent || '{}'));
+                } catch (e) { /* ignore */ }
+            }
+
+            // Then auto-detect location and refresh with precise coordinates
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    activeCoords = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        label: 'Current location'
+                    };
+                    // Reverse geocode for location name
+                    reverseGeocode(position.coords.latitude, position.coords.longitude).then(function(name) {
+                        if (name) activeCoords.label = name;
+                        refreshForecast();
+                    }).catch(function() {
+                        refreshForecast();
+                    });
+                },
+                function () {
+                    // Geolocation denied - use default, no error shown
+                    if (!initialDataNode) {
+                        refreshForecast();
+                    }
+                },
+                { enableHighAccuracy: false, timeout: 8000 }
+            );
         }
+
+        autoDetectLocation();
+
+        // Auto-refresh every 10 minutes
+        setInterval(refreshForecast, 600000);
     }
 
     function initCookieNotice() {

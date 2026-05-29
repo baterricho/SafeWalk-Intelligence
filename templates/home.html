@@ -87,7 +87,7 @@
         <div class="weather-card weather-dashboard-card" aria-live="polite">
             <div class="weather-dashboard-topline">
                 <div>
-                    <span class="weather-dashboard-kicker">SafeWalk live forecast</span>
+                    <span class="weather-dashboard-kicker"><span class="live-badge" data-weather-live-badge><span class="live-dot"></span> LIVE</span> SafeWalk forecast</span>
                     <h3>Today’s Walking Safety Index</h3>
                     <p class="weather-today-date" data-weather-today-date>{{ weather_today.day|default:"Friday" }}, {{ weather_today.date|default:"May 23, 2026" }}</p>
                 </div>
@@ -125,6 +125,13 @@
                         <div><dt>Rain Probability:</dt><dd data-weather-current-precipitation>45%</dd></div>
                         <div><dt>Humidity:</dt><dd data-weather-current-humidity>72%</dd></div>
                         <div><dt>Wind:</dt><dd data-weather-current-wind>8 km/h</dd></div>
+                        <div><dt>Feels Like:</dt><dd data-weather-current-feels-like>36°C</dd></div>
+                        <div><dt>UV Index:</dt><dd data-weather-current-uv-index>7 <small>(High)</small></dd></div>
+                        <div><dt>Pressure:</dt><dd data-weather-current-pressure>1013 hPa</dd></div>
+                        <div><dt>Visibility:</dt><dd data-weather-current-visibility>10 km</dd></div>
+                        <div><dt>Dew Point:</dt><dd data-weather-current-dew-point>25°C</dd></div>
+                        <div><dt>Sunrise:</dt><dd data-weather-current-sunrise>5:42 AM</dd></div>
+                        <div><dt>Sunset:</dt><dd data-weather-current-sunset>6:15 PM</dd></div>
                     </dl>
                 </div>
 

@@ -1,3 +1,4 @@
+import math
 from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 
@@ -53,9 +54,9 @@ SAMPLE_FORECAST = [
 
 def get_weather_data(lat=DEFAULT_LAT, lon=DEFAULT_LON, location_name=DEFAULT_LOCATION):
     """
-    Fetch weather dashboard data through OpenWeatherMap without exposing the API
-    key to the browser. Falls back to sample SafeWalk data when the API is not
-    reachable so the landing dashboard still renders professionally.
+    Fetch weather dashboard data. Tries OpenWeatherMap first if an API key is
+    configured, then falls back to Open-Meteo (free, no key needed). Uses sample
+    SafeWalk data as a last resort so the dashboard always renders.
     """
     api_key = settings.OPENWEATHER_API_KEY
     cache_key = f"weather_dashboard_{round(float(lat), 3)}_{round(float(lon), 3)}"
@@ -63,23 +64,32 @@ def get_weather_data(lat=DEFAULT_LAT, lon=DEFAULT_LON, location_name=DEFAULT_LOC
     if cached_weather:
         return cached_weather
 
-    if not api_key:
-        return sample_weather_data(location_name)
+    weather = None
 
-    try:
-        current = _fetch_openweather(
-            "https://api.openweathermap.org/data/2.5/weather",
-            {"lat": lat, "lon": lon, "appid": api_key, "units": "metric"},
-        )
-        forecast = _fetch_openweather(
-            "https://api.openweathermap.org/data/2.5/forecast",
-            {"lat": lat, "lon": lon, "appid": api_key, "units": "metric"},
-        )
-        weather = _build_weather_dashboard(current, forecast, location_name)
-    except Exception:
-        weather = sample_weather_data(location_name)
+    # Try OpenWeatherMap first if API key is available
+    if api_key:
+        try:
+            current = _fetch_openweather(
+                "https://api.openweathermap.org/data/2.5/weather",
+                {"lat": lat, "lon": lon, "appid": api_key, "units": "metric"},
+            )
+            forecast = _fetch_openweather(
+                "https://api.openweathermap.org/data/2.5/forecast",
+                {"lat": lat, "lon": lon, "appid": api_key, "units": "metric"},
+            )
+            weather = _build_weather_dashboard(current, forecast, location_name)
+        except Exception:
+            weather = None
 
-    cache.set(cache_key, weather, 900)
+    # Fallback to Open-Meteo (free, no API key)
+    if weather is None:
+        try:
+            open_meteo_data = _fetch_open_meteo(lat, lon)
+            weather = _build_open_meteo_dashboard(open_meteo_data, location_name)
+        except Exception:
+            weather = sample_weather_data(location_name)
+
+    cache.set(cache_key, weather, 600)
     return weather
 
 
@@ -267,6 +277,13 @@ def sample_weather_data(location_name=DEFAULT_LOCATION):
             "date": _format_display_date(now),
             "date_short": _format_display_date(now, short=True),
             "updated": "Updated recently",
+            "feels_like": 37,
+            "uv_index": 7,
+            "pressure": 1010,
+            "visibility": 10.0,
+            "dew_point": 25,
+            "sunrise": "5:42 AM",
+            "sunset": "6:15 PM",
         },
         "hourly": SAMPLE_HOURLY,
         "forecast": SAMPLE_FORECAST,
@@ -294,6 +311,32 @@ def _fetch_openweather(url, params):
     return response.json()
 
 
+def _fetch_open_meteo(lat, lon):
+    """Fetch weather data from Open-Meteo (free, no API key required)."""
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,surface_pressure,is_day",
+        "hourly": "temperature_2m,precipitation_probability,wind_speed_10m,relative_humidity_2m,apparent_temperature,uv_index,visibility,dew_point_2m",
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset,uv_index_max,apparent_temperature_max,apparent_temperature_min",
+        "timezone": "auto",
+        "forecast_days": "7",
+    }
+    response = requests.get("https://api.open-meteo.com/v1/forecast", params=params, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
+def _calculate_dew_point(temp, humidity):
+    """Calculate dew point using the Magnus formula."""
+    if humidity <= 0:
+        return 0
+    a = 17.27
+    b = 237.7
+    alpha = (a * temp) / (b + temp) + math.log(humidity / 100.0)
+    return round(b * alpha / (a - alpha))
+
+
 def _build_weather_dashboard(current, forecast, location_name):
     current_weather = (current.get("weather") or [{}])[0]
     main_data = current.get("main") or {}
@@ -304,24 +347,36 @@ def _build_weather_dashboard(current, forecast, location_name):
     location = location_name or _format_location(current, city)
     current_precipitation = _forecast_pop(forecast_items[0]) if forecast_items else _current_precipitation(current)
 
+    temp = round(main_data.get("temp", 0))
+    humidity = round(main_data.get("humidity", 0))
+    raw_visibility = current.get("visibility", 10000)
+    sunrise_ts = (current.get("sys") or {}).get("sunrise")
+    sunset_ts = (current.get("sys") or {}).get("sunset")
+
     weather = {
         "source": "openweather",
         "location": location,
         "current": {
-            "temp": round(main_data.get("temp", 0)),
+            "temp": temp,
             "condition": str(current_weather.get("description", "Weather")).title(),
             "main": current_weather.get("main", "Clear"),
             "weather_code": current_weather.get("id", 800),
             "precipitation": current_precipitation,
-            "humidity": round(main_data.get("humidity", 0)),
+            "humidity": humidity,
             "wind": round(wind_data.get("speed", 0) * 3.6),
-            "visibility": current.get("visibility"),
+            "visibility": round(raw_visibility / 1000, 1) if raw_visibility else 10.0,
             "icon": _weather_icon(current_weather.get("main", "Clear"), current_weather.get("id", 800)),
             "icon_url": _openweather_icon_url(current_weather.get("icon"), size="4x"),
             "day": _weekday_from_timestamp(current.get("dt"), timezone_offset, long=True),
             "date": _date_from_timestamp(current.get("dt"), timezone_offset),
             "date_short": _date_from_timestamp(current.get("dt"), timezone_offset, short=True),
             "updated": _updated_time(current.get("dt"), timezone_offset),
+            "feels_like": round(main_data.get("feels_like", 0)),
+            "uv_index": 0,  # OpenWeather free tier doesn't include UV in basic endpoint
+            "pressure": round(main_data.get("pressure", 0)),
+            "dew_point": _calculate_dew_point(temp, humidity),
+            "sunrise": _format_timestamp_time(sunrise_ts, timezone_offset) if sunrise_ts else "",
+            "sunset": _format_timestamp_time(sunset_ts, timezone_offset) if sunset_ts else "",
         },
         "hourly": _hourly_forecast(forecast_items, timezone_offset),
         "forecast": _daily_forecast(forecast_items, timezone_offset),
@@ -333,6 +388,199 @@ def _build_weather_dashboard(current, forecast, location_name):
         "title": risk["title"],
         "type": risk["type"],
         "location": location,
+        "time": weather["current"]["updated"],
+        "message": risk["message"],
+    }
+    weather["walking_advice"] = {
+        "risk_level": risk["level"],
+        "advice": risk["advice"],
+        "reasons": risk["reasons"],
+    }
+    return _with_legacy_weather_keys(weather)
+
+
+# ---------- WMO weather-code mapping (Open-Meteo) ----------
+
+WMO_CODE_MAP = {
+    0: ("Clear sky", "Clear", "bi-brightness-high"),
+    1: ("Mainly clear", "Clear", "bi-brightness-high"),
+    2: ("Partly cloudy", "Clouds", "bi-cloud-sun"),
+    3: ("Overcast", "Clouds", "bi-cloud"),
+    45: ("Fog", "Fog", "bi-cloud-fog"),
+    48: ("Depositing rime fog", "Fog", "bi-cloud-fog"),
+    51: ("Light drizzle", "Drizzle", "bi-cloud-drizzle"),
+    53: ("Moderate drizzle", "Drizzle", "bi-cloud-drizzle"),
+    55: ("Dense drizzle", "Drizzle", "bi-cloud-drizzle"),
+    56: ("Light freezing drizzle", "Drizzle", "bi-cloud-drizzle"),
+    57: ("Dense freezing drizzle", "Drizzle", "bi-cloud-drizzle"),
+    61: ("Slight rain", "Rain", "bi-cloud-rain"),
+    63: ("Moderate rain", "Rain", "bi-cloud-rain-heavy"),
+    65: ("Heavy rain", "Rain", "bi-cloud-rain-heavy"),
+    66: ("Light freezing rain", "Rain", "bi-cloud-rain-heavy"),
+    67: ("Heavy freezing rain", "Rain", "bi-cloud-rain-heavy"),
+    71: ("Slight snow", "Snow", "bi-cloud-snow"),
+    73: ("Moderate snow", "Snow", "bi-cloud-snow"),
+    75: ("Heavy snow", "Snow", "bi-cloud-snow"),
+    77: ("Snow grains", "Snow", "bi-cloud-snow"),
+    80: ("Slight rain showers", "Rain", "bi-cloud-rain"),
+    81: ("Moderate rain showers", "Rain", "bi-cloud-rain-heavy"),
+    82: ("Violent rain showers", "Rain", "bi-cloud-rain-heavy"),
+    85: ("Slight snow showers", "Snow", "bi-cloud-snow"),
+    86: ("Heavy snow showers", "Snow", "bi-cloud-snow"),
+    95: ("Thunderstorm", "Thunderstorm", "bi-cloud-lightning-rain"),
+    96: ("Thunderstorm with slight hail", "Thunderstorm", "bi-cloud-lightning-rain"),
+    99: ("Thunderstorm with heavy hail", "Thunderstorm", "bi-cloud-lightning-rain"),
+}
+
+
+def _wmo_decode(code):
+    """Decode a WMO weather code into (condition, main, icon)."""
+    return WMO_CODE_MAP.get(int(code or 0), ("Unknown", "Clear", "bi-cloud-sun"))
+
+
+def _format_open_meteo_time(iso_str):
+    """Format an Open-Meteo ISO time string like '2026-05-30T14:00' to '2 PM'."""
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        label = dt.strftime("%I %p").lstrip("0")
+        return label
+    except (ValueError, TypeError):
+        return ""
+
+
+def _format_open_meteo_sunrise_sunset(iso_str):
+    """Format an Open-Meteo ISO time string to '5:42 AM' style."""
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        return dt.strftime("%I:%M %p").lstrip("0")
+    except (ValueError, TypeError):
+        return ""
+
+
+def _build_open_meteo_dashboard(data, location_name):
+    """Normalize Open-Meteo response to the same format as the OpenWeather dashboard."""
+    current_data = data.get("current", {})
+    hourly_data = data.get("hourly", {})
+    daily_data = data.get("daily", {})
+    now = datetime.now()
+
+    wmo_code = current_data.get("weather_code", 0)
+    condition, main_weather, icon = _wmo_decode(wmo_code)
+    temp = round(current_data.get("temperature_2m", 0))
+    humidity = round(current_data.get("relative_humidity_2m", 0))
+    wind = round(current_data.get("wind_speed_10m", 0))
+    precip = round(current_data.get("precipitation", 0))
+    feels_like = round(current_data.get("apparent_temperature", temp))
+    pressure = round(current_data.get("surface_pressure", 0))
+    is_day = current_data.get("is_day", 1)
+
+    # Get sunrise/sunset from daily (first day)
+    daily_sunrise = (daily_data.get("sunrise") or [""])[0]
+    daily_sunset = (daily_data.get("sunset") or [""])[0]
+    uv_max = (daily_data.get("uv_index_max") or [0])[0]
+
+    # Hourly data - first 8 entries
+    hourly_times = hourly_data.get("time", [])[:8]
+    hourly_temps = hourly_data.get("temperature_2m", [])[:8]
+    hourly_precip = hourly_data.get("precipitation_probability", [])[:8]
+    hourly_wind = hourly_data.get("wind_speed_10m", [])[:8]
+    hourly_humidity = hourly_data.get("relative_humidity_2m", [])[:8]
+    hourly_uv = hourly_data.get("uv_index", [])[:8]
+    hourly_vis = hourly_data.get("visibility", [])[:8]
+    hourly_dew = hourly_data.get("dew_point_2m", [])[:8]
+
+    hourly = []
+    for i in range(min(8, len(hourly_times))):
+        hourly.append({
+            "label": _format_open_meteo_time(hourly_times[i]) if i < len(hourly_times) else "",
+            "temperature": round(hourly_temps[i]) if i < len(hourly_temps) else 0,
+            "precipitation": round(hourly_precip[i]) if i < len(hourly_precip) else 0,
+            "wind": round(hourly_wind[i]) if i < len(hourly_wind) else 0,
+            "humidity": round(hourly_humidity[i]) if i < len(hourly_humidity) else 0,
+        })
+
+    # Daily forecast - up to 7 days
+    daily_times = daily_data.get("time", [])[:7]
+    daily_codes = daily_data.get("weather_code", [])[:7]
+    daily_max = daily_data.get("temperature_2m_max", [])[:7]
+    daily_min = daily_data.get("temperature_2m_min", [])[:7]
+    daily_precip_prob = daily_data.get("precipitation_probability_max", [])[:7]
+    daily_wind_max = daily_data.get("wind_speed_10m_max", [])[:7]
+    daily_uv_max_list = daily_data.get("uv_index_max", [])[:7]
+    daily_feels_max = daily_data.get("apparent_temperature_max", [])[:7]
+    daily_feels_min = daily_data.get("apparent_temperature_min", [])[:7]
+
+    forecast = []
+    for i in range(min(7, len(daily_times))):
+        try:
+            day_dt = datetime.strptime(daily_times[i], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            day_dt = now + timedelta(days=i)
+        day_cond, day_main, day_icon = _wmo_decode(daily_codes[i] if i < len(daily_codes) else 0)
+        forecast.append({
+            "weekday": day_dt.strftime("%a"),
+            "day": day_dt.strftime("%A"),
+            "date": _format_display_date(day_dt),
+            "date_short": _format_display_date(day_dt, short=True),
+            "date_key": day_dt.strftime("%Y-%m-%d"),
+            "main": day_main,
+            "weather_code": daily_codes[i] if i < len(daily_codes) else 0,
+            "condition": day_cond,
+            "icon": day_icon,
+            "icon_url": "",
+            "temp_max": round(daily_max[i]) if i < len(daily_max) else 0,
+            "temp_min": round(daily_min[i]) if i < len(daily_min) else 0,
+            "temperature": round(daily_max[i]) if i < len(daily_max) else 0,
+            "precipitation": round(daily_precip_prob[i]) if i < len(daily_precip_prob) else 0,
+            "rain_probability": round(daily_precip_prob[i]) if i < len(daily_precip_prob) else 0,
+            "humidity": humidity,
+            "wind": round(daily_wind_max[i]) if i < len(daily_wind_max) else 0,
+            "wind_speed": round(daily_wind_max[i]) if i < len(daily_wind_max) else 0,
+        })
+
+    # Get first hourly visibility for current visibility
+    current_visibility_m = hourly_vis[0] if hourly_vis else 10000
+    current_dew = hourly_dew[0] if hourly_dew else _calculate_dew_point(temp, humidity)
+    current_uv = hourly_uv[0] if hourly_uv else uv_max
+
+    # Estimate precipitation probability from first hourly entry
+    current_precip_prob = hourly_precip[0] if hourly_precip else (80 if precip > 0 else 0)
+
+    weather = {
+        "source": "open-meteo",
+        "location": location_name or DEFAULT_LOCATION,
+        "current": {
+            "temp": temp,
+            "condition": condition,
+            "main": main_weather,
+            "weather_code": wmo_code,
+            "precipitation": current_precip_prob,
+            "humidity": humidity,
+            "wind": wind,
+            "visibility": round(current_visibility_m / 1000, 1) if current_visibility_m else 10.0,
+            "icon": icon,
+            "icon_url": "",
+            "day": now.strftime("%A"),
+            "date": _format_display_date(now),
+            "date_short": _format_display_date(now, short=True),
+            "updated": f"Updated {now.strftime('%I:%M %p').lstrip('0')}",
+            "feels_like": feels_like,
+            "uv_index": round(current_uv, 1) if current_uv else 0,
+            "pressure": pressure,
+            "dew_point": round(current_dew) if current_dew else _calculate_dew_point(temp, humidity),
+            "sunrise": _format_open_meteo_sunrise_sunset(daily_sunrise),
+            "sunset": _format_open_meteo_sunrise_sunset(daily_sunset),
+        },
+        "hourly": hourly or SAMPLE_HOURLY,
+        "forecast": forecast or SAMPLE_FORECAST,
+    }
+
+    _enrich_weather_indexes(weather)
+    risk = calculate_weather_walking_risk(weather)
+    weather["alert"] = {
+        "title": risk["title"],
+        "type": risk["type"],
+        "location": weather["location"],
         "time": weather["current"]["updated"],
         "message": risk["message"],
     }
@@ -479,6 +727,14 @@ def _updated_time(timestamp, timezone_offset):
     return f"Updated {_local_datetime(timestamp, timezone_offset).strftime('%I:%M %p').lstrip('0')}"
 
 
+def _format_timestamp_time(timestamp, timezone_offset):
+    """Format a Unix timestamp to a time string like '5:42 AM'."""
+    if not timestamp:
+        return ""
+    dt = _local_datetime(timestamp, timezone_offset)
+    return dt.strftime("%I:%M %p").lstrip("0")
+
+
 def _with_legacy_weather_keys(weather):
     _enrich_weather_indexes(weather)
     current = weather["current"]
@@ -490,6 +746,13 @@ def _with_legacy_weather_keys(weather):
             "main": current["main"],
             "risk_level": weather["walking_advice"]["risk_level"],
             "advice": weather["walking_advice"]["advice"],
+            "feels_like": current.get("feels_like", 0),
+            "uv_index": current.get("uv_index", 0),
+            "pressure": current.get("pressure", 0),
+            "visibility": current.get("visibility", 0),
+            "dew_point": current.get("dew_point", 0),
+            "sunrise": current.get("sunrise", ""),
+            "sunset": current.get("sunset", ""),
         }
     )
     return weather
