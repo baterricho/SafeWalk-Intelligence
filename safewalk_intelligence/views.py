@@ -54,3 +54,18 @@ def web_manifest(request):
     response = FileResponse(open(manifest_path, "rb"), content_type="application/manifest+json")
     response["Cache-Control"] = "no-cache"
     return response
+
+
+def download_android_apk(request):
+    apk_path = finders.find("downloads/SafeWalk-Intelligence.apk")
+    if not apk_path:
+        raise Http404("SafeWalk Android APK not found.")
+
+    response = FileResponse(
+        open(apk_path, "rb"),
+        as_attachment=True,
+        filename="SafeWalk-Intelligence.apk",
+        content_type="application/vnd.android.package-archive",
+    )
+    response["Cache-Control"] = "no-cache"
+    return response

@@ -8,10 +8,11 @@ from accounts import views as account_views
 from dashboard import views as dashboard_views
 
 
-from .views import health_check, service_worker, web_manifest
+from .views import download_android_apk, health_check, service_worker, web_manifest
 
 urlpatterns = [
     path("health/", health_check, name="health_check"),
+    path("download/android/", download_android_apk, name="download_android_apk"),
     path("offline/", TemplateView.as_view(template_name="offline.html"), name="offline"),
     path("manifest.json", web_manifest, name="web_manifest"),
     path("service-worker.js", service_worker, name="service_worker"),
