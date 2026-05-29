@@ -44,3 +44,13 @@ def service_worker(request):
     response["Service-Worker-Allowed"] = "/"
     response["Cache-Control"] = "no-cache"
     return response
+
+
+def web_manifest(request):
+    manifest_path = finders.find("manifest.json")
+    if not manifest_path:
+        raise Http404("Manifest not found.")
+
+    response = FileResponse(open(manifest_path, "rb"), content_type="application/manifest+json")
+    response["Cache-Control"] = "no-cache"
+    return response
