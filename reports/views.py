@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.management import call_command
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -40,6 +41,15 @@ def visible_reports_for_user(user):
     if user and user.is_authenticated:
         return qs.filter(public_filter | Q(user=user))
     return qs.filter(public_filter)
+
+
+def ensure_sample_reports():
+    if SafetyReport.objects.exists():
+        return
+    try:
+        call_command("seed_data", verbosity=0)
+    except Exception:
+        return
 
 
 class SafetyReportViewSet(viewsets.ModelViewSet):
@@ -166,6 +176,7 @@ class AreaSummaryAPIView(APIView):
 
 
 def report_list_page(request):
+    ensure_sample_reports()
     reports = visible_reports_for_user(request.user)
     query = request.GET.get("q", "").strip()
     category = request.GET.get("category", "")
