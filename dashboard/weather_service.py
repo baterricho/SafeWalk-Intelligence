@@ -105,10 +105,11 @@ def calculate_weather_safety_index(weather_data):
     visibility = current.get("visibility", weather_data.get("visibility"))
 
     is_thunderstorm = main == "Thunderstorm" or 200 <= weather_code <= 232 or "thunder" in condition.lower()
-    is_poor_visibility = (
-        main in {"Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash"}
-        or (visibility is not None and float(visibility) < 3000)
-    )
+    is_poor_visibility = main in {"Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash"}
+    if visibility is not None:
+        visibility_value = float(visibility)
+        visibility_threshold = 3 if visibility_value <= 100 else 3000
+        is_poor_visibility = is_poor_visibility or visibility_value < visibility_threshold
 
     probability = 0
     reasons = []
@@ -141,7 +142,7 @@ def calculate_weather_safety_index(weather_data):
         reasons.append("Poor visibility")
 
     probability = max(0, min(100, probability))
-    if probability <= 20:
+    if probability < 20:
         label = "Safe"
         risk_key = "safe"
         advice = "Good walking condition. Stay aware of traffic and nearby SafeWalk reports."
@@ -258,6 +259,23 @@ def calculate_weather_walking_risk(weather_data):
     }
 
 
+def _alert_from_safety_index(weather):
+    current = weather.get("weather_today") or weather.get("current", {})
+    safety_index = current if current.get("index_label") else calculate_weather_safety_index({"current": current})
+    index_key = safety_index.get("index_key", "safe")
+    title = "Safe Walking Weather" if index_key == "safe" else f"{safety_index.get('index_label', 'Weather')} Weather"
+    message = "; ".join(safety_index.get("risk_reasons", [])) or "Check conditions before walking."
+    alert_type = "danger" if index_key in {"high", "critical"} else "caution" if index_key == "moderate" else "safe"
+
+    return {
+        "title": title,
+        "type": alert_type,
+        "location": weather.get("location", DEFAULT_LOCATION),
+        "time": weather.get("current", {}).get("updated", "Updated recently"),
+        "message": message,
+    }
+
+
 def sample_weather_data(location_name=DEFAULT_LOCATION):
     now = datetime.now()
     weather = {
@@ -289,17 +307,11 @@ def sample_weather_data(location_name=DEFAULT_LOCATION):
         "forecast": SAMPLE_FORECAST,
     }
     _enrich_weather_indexes(weather)
+    weather["alert"] = _alert_from_safety_index(weather)
     risk = calculate_weather_walking_risk(weather)
-    weather["alert"] = {
-        "title": risk["title"],
-        "type": risk["type"],
-        "location": weather["location"],
-        "time": "Updated recently",
-        "message": risk["message"],
-    }
     weather["walking_advice"] = {
         "risk_level": risk["level"],
-        "advice": risk["advice"],
+        "advice": weather["weather_today"].get("advice", risk["advice"]),
         "reasons": risk["reasons"],
     }
     return _with_legacy_weather_keys(weather)
@@ -383,17 +395,11 @@ def _build_weather_dashboard(current, forecast, location_name):
     }
 
     _enrich_weather_indexes(weather)
+    weather["alert"] = _alert_from_safety_index(weather)
     risk = calculate_weather_walking_risk(weather)
-    weather["alert"] = {
-        "title": risk["title"],
-        "type": risk["type"],
-        "location": location,
-        "time": weather["current"]["updated"],
-        "message": risk["message"],
-    }
     weather["walking_advice"] = {
         "risk_level": risk["level"],
-        "advice": risk["advice"],
+        "advice": weather["weather_today"].get("advice", risk["advice"]),
         "reasons": risk["reasons"],
     }
     return _with_legacy_weather_keys(weather)
@@ -576,17 +582,11 @@ def _build_open_meteo_dashboard(data, location_name):
     }
 
     _enrich_weather_indexes(weather)
+    weather["alert"] = _alert_from_safety_index(weather)
     risk = calculate_weather_walking_risk(weather)
-    weather["alert"] = {
-        "title": risk["title"],
-        "type": risk["type"],
-        "location": weather["location"],
-        "time": weather["current"]["updated"],
-        "message": risk["message"],
-    }
     weather["walking_advice"] = {
         "risk_level": risk["level"],
-        "advice": risk["advice"],
+        "advice": weather["weather_today"].get("advice", risk["advice"]),
         "reasons": risk["reasons"],
     }
     return _with_legacy_weather_keys(weather)

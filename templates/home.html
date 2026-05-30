@@ -189,18 +189,18 @@
                 {% endfor %}
             </div>
 
-            <div class="weather-alert danger">
-                <h3 data-weather-alert-title>Excessive Heat</h3>
+            <div class="weather-alert {{ weather.alert.type|default:'safe' }}">
+                <h3 data-weather-alert-title>{{ weather.alert.title|default:"Safe Walking Weather" }}</h3>
                 <div class="weather-alert-meta">
-                    <strong data-weather-alert-location>Tiniguiban, Puerto Princesa City</strong>
-                    <span data-weather-alert-time>Updated recently</span>
+                    <strong data-weather-alert-location>{{ weather.alert.location|default:"Tiniguiban, Puerto Princesa City" }}</strong>
+                    <span data-weather-alert-time>{{ weather.alert.time|default:"Updated recently" }}</span>
                 </div>
-                <p data-weather-alert-message>Severe heat is expected in this area.</p>
+                <p data-weather-alert-message>{{ weather.alert.message|default:"Check conditions before walking." }}</p>
             </div>
 
-            <div class="walking-advice-card danger">
+            <div class="walking-advice-card {{ weather.alert.type|default:'safe' }}">
                 <div class="walking-advice-header">
-                    <span>Walking Safety Index: <strong data-weather-risk-level>High Risk</strong></span>
+                    <span>Walking Safety Index: <strong data-weather-risk-level>{{ weather_today.index_label|default:"Safe" }}</strong></span>
                     <span>Index Probability: <strong data-weather-index-probability>{{ weather_today.index_probability|default:78 }}%</strong></span>
                     <div class="walking-advice-icons" aria-hidden="true">
                         <i class="bi bi-thermometer-sun"></i>
@@ -209,7 +209,7 @@
                         <i class="bi bi-signpost-split"></i>
                     </div>
                 </div>
-                <p><strong>SafeWalk Advice:</strong> <span data-weather-advice>Avoid long walks during peak heat. Bring water, use shaded routes, and avoid flood-prone shortcuts if rain starts.</span></p>
+                <p><strong>SafeWalk Advice:</strong> <span data-weather-advice>{{ weather_today.advice|default:"Use normal walking precautions and check nearby SafeWalk reports." }}</span></p>
             </div>
 
             <p class="weather-live-status" data-weather-status>Loading weather forecast...</p>

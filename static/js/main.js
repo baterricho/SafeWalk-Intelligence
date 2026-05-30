@@ -1084,6 +1084,17 @@
         };
     }
 
+    function weatherAlertFromIndex(index, location, updated) {
+        const key = index.index_key || "safe";
+        return {
+            title: key === "safe" ? "Safe Walking Weather" : `${index.index_label || "Weather"} Weather`,
+            type: key === "critical" || key === "high" ? "danger" : key === "moderate" ? "caution" : "safe",
+            location: location,
+            time: updated || "Updated recently",
+            message: (index.risk_reasons || []).join(", ") || "Check conditions before walking."
+        };
+    }
+
     function calculateWeatherSafetyIndex(weatherData) {
         const current = weatherData.current || weatherData;
         const temp = Number(current.temp || 0);
@@ -1092,8 +1103,10 @@
         const wind = Number(current.wind || 0);
         const main = current.main || "";
         const code = Number(current.weather_code || 800);
+        const visibility = Number(current.visibility || 0);
         const isStorm = main === "Thunderstorm" || (code >= 200 && code <= 232);
-        const isLowVisibility = ["Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash"].includes(main);
+        const isLowVisibility = ["Mist", "Smoke", "Haze", "Dust", "Fog", "Sand", "Ash"].includes(main)
+            || (visibility > 0 && visibility < (visibility <= 100 ? 3 : 3000));
         let probability = 0;
         const reasons = [];
         if (precipitation > 70) {
@@ -1145,7 +1158,7 @@
             label = "Moderate Risk";
             key = "moderate";
             advice = "Use caution while walking. Bring rain protection or water if needed.";
-        } else if (probability > 20) {
+        } else if (probability >= 20) {
             label = "Low Risk";
             key = "low";
             advice = "Minor weather concern. Use normal walking precautions.";
@@ -1397,16 +1410,10 @@
         weatherData.weather_today = weatherData.current;
         weatherData.daily_forecast = weatherData.forecast;
         const risk = calculateWeatherWalkingRisk(weatherData);
-        weatherData.alert = {
-            title: risk.title,
-            type: risk.type,
-            location: locationLabel,
-            time: "Updated recently",
-            message: risk.message
-        };
+        weatherData.alert = weatherAlertFromIndex(weatherData.weather_today, locationLabel, "Updated recently");
         weatherData.walking_advice = {
             risk_level: risk.level,
-            advice: risk.advice
+            advice: weatherData.weather_today.advice || risk.advice
         };
         return weatherData;
     }
@@ -1501,15 +1508,16 @@
 
             const alert = panel.querySelector(".weather-alert");
             const advice = panel.querySelector(".walking-advice-card");
-            const type = alertData.type || adviceData.type || "safe";
+            const liveAlert = weatherAlertFromIndex(todayIndex, alertData.location || data.location || defaultCoords.label, alertData.time || current.updated);
+            const type = liveAlert.type || adviceData.type || "safe";
             if (alert) alert.className = `weather-alert ${type}`;
             if (advice) advice.className = `walking-advice-card ${type}`;
             const riskPill = panel.querySelector(".weather-risk-pill");
             if (riskPill) riskPill.className = `weather-risk-pill weather-index-${todayIndex.index_key || "safe"} ${type}`;
-            setText("[data-weather-alert-title]", alertData.title || "Today’s Walking Safety Index");
-            setText("[data-weather-alert-location]", alertData.location || data.location || defaultCoords.label);
-            setText("[data-weather-alert-time]", alertData.time || current.updated || "Updated recently");
-            setText("[data-weather-alert-message]", alertData.message || (todayIndex.risk_reasons || []).join(", ") || "Check conditions before walking.");
+            setText("[data-weather-alert-title]", liveAlert.title);
+            setText("[data-weather-alert-location]", liveAlert.location);
+            setText("[data-weather-alert-time]", liveAlert.time);
+            setText("[data-weather-alert-message]", liveAlert.message);
             setText("[data-weather-risk-level]", todayIndex.index_label || adviceData.risk_level || "Safe");
             setText("[data-weather-advice]", todayIndex.advice || adviceData.advice || "Use normal walking precautions and check nearby SafeWalk reports.");
 
