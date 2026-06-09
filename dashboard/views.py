@@ -24,6 +24,11 @@ from .weather_service import get_weather_data
 
 
 def serialize_report_for_dashboard(report):
+    try:
+        photo_url = report.photo.url if report.photo else ""
+    except ValueError:
+        photo_url = ""
+
     return {
         "id": report.id,
         "title": report.title,
@@ -42,6 +47,7 @@ def serialize_report_for_dashboard(report):
         "credibility_label": report.get_credibility_label_display(),
         "comment_count": report.comment_count,
         "confirmation_count": report.confirmation_count,
+        "photo_url": photo_url,
         "detail_url": f"/reports/{report.id}/",
         "created_at": report.created_at.isoformat(),
         "updated_at": report.updated_at.isoformat(),

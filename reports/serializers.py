@@ -9,6 +9,7 @@ from .services import calculate_report_decay, suggest_admin_status
 class SafetyReportSerializer(serializers.ModelSerializer):
     reporter_name = serializers.SerializerMethodField()
     reporter_username = serializers.SerializerMethodField()
+    photo_url = serializers.SerializerMethodField()
     score_label = serializers.CharField(read_only=True)
     confirmations_count = serializers.SerializerMethodField()
     disputes_count = serializers.SerializerMethodField()
@@ -42,6 +43,7 @@ class SafetyReportSerializer(serializers.ModelSerializer):
             "is_anonymous",
             "visibility_level",
             "photo",
+            "photo_url",
             "safety_score",
             "score_label",
             "evidence_score",
@@ -81,6 +83,16 @@ class SafetyReportSerializer(serializers.ModelSerializer):
         if obj.is_anonymous or obj.visibility_level == SafetyReport.VisibilityLevel.ANONYMOUS_PUBLIC:
             return None
         return obj.user.username if obj.user else None
+
+    def get_photo_url(self, obj):
+        if not obj.photo:
+            return ""
+        try:
+            url = obj.photo.url
+        except ValueError:
+            return ""
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
 
     def get_confirmations_count(self, obj):
         return obj.confirmations.filter(confirmation_type=ReportConfirmation.ConfirmationType.CONFIRMED).count()

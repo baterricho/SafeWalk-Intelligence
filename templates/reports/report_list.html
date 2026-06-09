@@ -45,8 +45,17 @@
     {% for report in reports %}
         <div class="col-md-6 col-xl-4">
             <article class="report-card h-100 enhanced-report-card">
+                {% if report.photo %}
+                    <a class="report-evidence-link d-block mb-3" href="{% url 'report_detail' report.pk %}" aria-label="View photo evidence for {{ report.title }}">
+                        <img class="report-card-photo" src="{{ report.photo.url }}" alt="Photo evidence for {{ report.title }}" loading="lazy">
+                    </a>
+                {% endif %}
+
                 <div class="d-flex justify-content-between gap-2 flex-wrap">
                     <span class="badge risk-{{ report.risk_level }}">{{ report.get_risk_level_display }}</span>
+                    {% if report.photo %}
+                        <span class="badge evidence-badge"><i class="bi bi-image"></i> Photo evidence</span>
+                    {% endif %}
                     <span class="badge score-badge">{{ report.safety_score }} / 100</span>
                 </div>
 

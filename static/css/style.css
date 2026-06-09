@@ -580,6 +580,48 @@ button.route-option-card:hover,
     border-radius: 8px;
 }
 
+.report-card-photo,
+.dashboard-report-photo,
+.report-table-photo {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    object-fit: cover;
+}
+
+.report-card-photo {
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    display: block;
+    width: 100%;
+}
+
+.dashboard-evidence-link,
+.report-evidence-link {
+    display: block;
+}
+
+.dashboard-report-photo {
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    display: block;
+    margin-bottom: .85rem;
+    width: 100%;
+}
+
+.report-table-photo {
+    border-radius: 6px;
+    height: 56px;
+    width: 84px;
+}
+
+.evidence-badge {
+    align-items: center;
+    background: #ecfeff;
+    color: #0f766e;
+    display: inline-flex;
+    gap: .25rem;
+}
+
 .location-line {
     color: #475569;
     font-weight: 700;
