@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from shutil import copyfile
@@ -6,6 +7,7 @@ from django.core.wsgi import get_wsgi_application
 
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "safewalk_intelligence.settings")
+logger = logging.getLogger(__name__)
 
 application = get_wsgi_application()
 
@@ -44,11 +46,12 @@ def bootstrap_vercel():
             from reports.models import SafetyReport
             if not SafetyReport.objects.exists():
                 call_command("seed_data", verbosity=1)
-    except Exception as e:
-        print(f"Bootstrap error: {str(e)}")
+    except Exception:
+        logger.exception("Vercel bootstrap failed")
         # We don't necessarily want to crash the whole app if seeding fails,
         # but migrations are usually critical.
 
 
-bootstrap_vercel()
+if os.environ.get("VERCEL"):
+    bootstrap_vercel()
 app = application

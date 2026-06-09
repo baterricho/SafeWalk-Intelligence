@@ -311,6 +311,51 @@ python manage.py migrate
 python manage.py seed_data
 ```
 
+## PythonAnywhere Deployment
+
+If the site shows PythonAnywhere's `502-backend` page, the Django app is crashing before it can serve a response. Check the site's **Error log** first; it will show the real Python exception.
+
+For this project, the PythonAnywhere Web tab should use:
+
+```python
+import os
+import sys
+
+project_home = "/home/rjep/safewalk_intelligence"
+if project_home not in sys.path:
+    sys.path.insert(0, project_home)
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "safewalk_intelligence.settings")
+
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+```
+
+Set these environment values in the PythonAnywhere virtualenv or `.env` file:
+
+```text
+SECRET_KEY=<long-random-secret>
+DEBUG=False
+ALLOWED_HOSTS=rjep.pythonanywhere.com
+CORS_ALLOWED_ORIGINS=https://rjep.pythonanywhere.com
+CSRF_TRUSTED_ORIGINS=https://rjep.pythonanywhere.com
+SECURE_SSL_REDIRECT=False
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+```
+
+Then install requirements and prepare the database from a Bash console:
+
+```bash
+cd /home/rjep/safewalk_intelligence
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+```
+
+After those commands pass, reload the site from the PythonAnywhere Web tab.
+
 ## Screenshots
 
 Add screenshots here after running locally:

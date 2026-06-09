@@ -1,10 +1,14 @@
 import mimetypes
 import posixpath
 import uuid
+import logging
 from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage, Storage
+
+
+logger = logging.getLogger(__name__)
 
 
 class VercelBlobStorage(Storage):
@@ -41,9 +45,9 @@ class VercelBlobStorage(Storage):
                 overwrite=False,
             )
             return blob.url
-        except Exception as e:
+        except Exception:
             # Fallback to local storage if Vercel Blob fails for any reason
-            print(f"Vercel Blob storage error: {str(e)}")
+            logger.exception("Vercel Blob storage failed; falling back to local storage")
             return self.local_storage.save(name, content)
 
     def delete(self, name):

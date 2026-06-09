@@ -13,7 +13,13 @@ DEBUG_DEFAULT = "False" if IS_VERCEL else "True"
 DEBUG_RAW = str(config("DEBUG", default=DEBUG_DEFAULT)).strip().lower()
 DEBUG = DEBUG_RAW not in {"0", "false", "no", "off", "production", "prod"}
 
-ALLOWED_HOSTS = list(config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.vercel.app,safe-walk-intelligence.vercel.app", cast=Csv()))
+ALLOWED_HOSTS = list(
+    config(
+        "ALLOWED_HOSTS",
+        default="localhost,127.0.0.1,.vercel.app,safe-walk-intelligence.vercel.app,rjep.pythonanywhere.com",
+        cast=Csv(),
+    )
+)
 if DEBUG:
     for host in ["localhost", "127.0.0.1"]:
         if host not in ALLOWED_HOSTS:
