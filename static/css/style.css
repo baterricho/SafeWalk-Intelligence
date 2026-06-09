@@ -564,7 +564,8 @@ button.route-option-card:hover,
     background: #f8fafc;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
-    display: block;
+    display: flex;
+    flex-direction: column;
     margin: 0;
     overflow: hidden;
     text-align: center;
@@ -582,7 +583,7 @@ button.route-option-card:hover,
 
 .report-photo-caption {
     background: #fff;
-    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
     color: #475569;
     font-size: .85rem;
     font-weight: 800;
