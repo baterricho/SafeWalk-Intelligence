@@ -324,11 +324,6 @@
                     const item = document.createElement("article");
                     item.className = "report-card-v2";
                     item.innerHTML = `
-                        ${report.photo_url ? `
-                            <a class="dashboard-evidence-link" href="${report.detail_url}" aria-label="View photo evidence for ${escapeHtml(report.title)}">
-                                <img class="dashboard-report-photo" src="${escapeHtml(report.photo_url)}" alt="Photo evidence for ${escapeHtml(report.title)}" loading="lazy">
-                            </a>
-                        ` : ""}
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                             <strong class="title">${escapeHtml(report.title)}</strong>
                             <span class="risk-badge risk-${report.risk_level}">${escapeHtml(report.risk_display)}</span>

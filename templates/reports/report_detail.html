@@ -22,15 +22,21 @@
         </div>
     </div>
 
-    <div class="report-post-body mt-4">
-        <p>{{ report.description }}</p>
+    <div class="row g-4 align-items-start mt-2">
+        <div class="{% if report.photo %}col-lg-6{% else %}col-12{% endif %}">
+            <div class="report-post-body">
+                <p>{{ report.description }}</p>
+            </div>
+        </div>
+        {% if report.photo %}
+            <div class="col-lg-6">
+                <figure class="report-photo-frame">
+                    <img class="report-photo" src="{{ report.photo.url }}" alt="Photo evidence for {{ report.title }}">
+                    <figcaption class="report-photo-caption">Photo evidence</figcaption>
+                </figure>
+            </div>
+        {% endif %}
     </div>
-
-    {% if report.photo %}
-        <figure class="report-photo-frame mt-3">
-            <img class="report-photo" src="{{ report.photo.url }}" alt="Photo evidence for {{ report.title }}">
-        </figure>
-    {% endif %}
 </article>
 
 <div class="row g-3 mb-4">
