@@ -561,15 +561,13 @@ button.route-option-card:hover,
 }
 
 .report-photo-frame {
-    align-items: center;
     background: #f8fafc;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    display: block;
     margin: 0;
     overflow: hidden;
+    text-align: center;
 }
 
 .report-photo {
@@ -577,6 +575,7 @@ button.route-option-card:hover,
     height: auto;
     max-height: 82vh;
     max-width: 100%;
+    margin: 0 auto;
     object-fit: contain;
     border-radius: 8px;
 }
