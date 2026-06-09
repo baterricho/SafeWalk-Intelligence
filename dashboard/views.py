@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsAdminRole, user_is_admin
 from reports.models import ReportStatusHistory, SafetyReport
+from reports.seed import ensure_sample_reports
 from reports.serializers import ReportStatusHistorySerializer, SafetyReportSerializer
 from reports.services import generate_area_clusters, refresh_report_intelligence, update_user_trust_score
 from reports.views import visible_reports_for_user
@@ -48,6 +49,7 @@ def serialize_report_for_dashboard(report):
 
 
 def home_page(request):
+    ensure_sample_reports()
     try:
         summary = dashboard_summary()
     except Exception:
@@ -91,6 +93,7 @@ def weather_api(request):
 @login_required
 @ensure_csrf_cookie
 def user_dashboard_page(request):
+    ensure_sample_reports()
     reports = visible_reports_for_user(request.user).exclude(status=SafetyReport.Status.REJECTED)[:300]
     report_data = [serialize_report_for_dashboard(report) for report in reports]
     user_reports = SafetyReport.objects.filter(user=request.user)
@@ -129,6 +132,7 @@ def user_dashboard_page(request):
 
 @login_required
 def dashboard_reports_api(request):
+    ensure_sample_reports()
     reports = visible_reports_for_user(request.user).exclude(status=SafetyReport.Status.REJECTED)[:300]
     user_reports = SafetyReport.objects.filter(user=request.user)
     return JsonResponse(
@@ -147,6 +151,7 @@ def admin_required(user):
 @user_passes_test(admin_required, login_url="login")
 @ensure_csrf_cookie
 def admin_dashboard_page(request):
+    ensure_sample_reports()
     reports = SafetyReport.objects.select_related("user", "user__profile").prefetch_related("confirmations")[:300]
     context = {
         "summary": dashboard_summary(),
@@ -161,6 +166,7 @@ def admin_dashboard_page(request):
 @user_passes_test(admin_required, login_url="login")
 @ensure_csrf_cookie
 def admin_reports_page(request):
+    ensure_sample_reports()
     reports = SafetyReport.objects.select_related("user", "user__profile").prefetch_related("confirmations")
     query = request.GET.get("q", "").strip()
     category = request.GET.get("category", "")
@@ -191,6 +197,7 @@ class AdminDashboardAPIView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        ensure_sample_reports()
         serializer = DashboardSummarySerializer(dashboard_summary())
         return Response(serializer.data)
 
@@ -199,6 +206,7 @@ class AdminReportsAPIView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        ensure_sample_reports()
         reports = SafetyReport.objects.select_related("user", "user__profile").prefetch_related("confirmations")
         serializer = SafetyReportSerializer(reports, many=True, context={"request": request})
         return Response(serializer.data)

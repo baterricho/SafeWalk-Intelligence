@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.management import call_command
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -18,6 +17,7 @@ from .filters import SafetyReportFilter
 from .forms import SafetyReportForm
 from .models import ReportConfirmation, SafetyReport
 from .permissions import IsConfirmationOwnerOrAdmin, IsOwnerOrAdminOrReadOnly
+from .seed import ensure_sample_reports
 from .serializers import AreaClusterSerializer, ReportConfirmationSerializer, SafetyReportSerializer
 from .services import (
     calculate_evidence_score,
@@ -34,6 +34,7 @@ from .services import (
 
 
 def visible_reports_for_user(user):
+    ensure_sample_reports()
     qs = SafetyReport.objects.select_related("user", "user__profile").prefetch_related("confirmations")
     if user_is_admin(user):
         return qs
@@ -41,15 +42,6 @@ def visible_reports_for_user(user):
     if user and user.is_authenticated:
         return qs.filter(public_filter | Q(user=user))
     return qs.filter(public_filter)
-
-
-def ensure_sample_reports():
-    if SafetyReport.objects.exists():
-        return
-    try:
-        call_command("seed_data", verbosity=0)
-    except Exception:
-        return
 
 
 class SafetyReportViewSet(viewsets.ModelViewSet):
@@ -161,17 +153,20 @@ class ConfirmationDetailAPIView(APIView):
 
 class AreaClustersAPIView(APIView):
     def get(self, request):
+        ensure_sample_reports()
         serializer = AreaClusterSerializer(generate_area_clusters(), many=True)
         return Response(serializer.data)
 
 
 class AreaTimelineAPIView(APIView):
     def get(self, request, location_name):
+        ensure_sample_reports()
         return Response({"location_name": location_name, "timeline": generate_location_timeline(location_name)})
 
 
 class AreaSummaryAPIView(APIView):
     def get(self, request, location_name):
+        ensure_sample_reports()
         return Response(generate_area_summary(location_name))
 
 
