@@ -25,6 +25,10 @@ if DEBUG:
         if host not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(host)
 
+for host in ["rjep.pythonanywhere.com", ".pythonanywhere.com"]:
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
+
 VERCEL_URL = config("VERCEL_URL", default="")
 if VERCEL_URL and VERCEL_URL not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(VERCEL_URL)
